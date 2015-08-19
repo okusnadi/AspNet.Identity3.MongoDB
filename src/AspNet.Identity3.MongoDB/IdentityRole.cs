@@ -9,7 +9,7 @@ namespace AspNet5.Identity.MongoDB
 	public class IdentityRole : IdentityRole<string>
 	{
 		/// <summary>
-		///     Constructor
+		/// Constructor
 		/// </summary>
 		public IdentityRole()
 		{
@@ -17,7 +17,7 @@ namespace AspNet5.Identity.MongoDB
 		}
 
 		/// <summary>
-		///     Constructor
+		/// Constructor
 		/// </summary>
 		/// <param name="roleName"></param>
 		public IdentityRole(string roleName) : this()
@@ -27,7 +27,7 @@ namespace AspNet5.Identity.MongoDB
 	}
 
 	/// <summary>
-	///     Represents a Role entity
+	/// Represents a Role entity
 	/// </summary>
 	/// <typeparam name="TKey"></typeparam>
 	public class IdentityRole<TKey> where TKey : IEquatable<TKey>
@@ -35,7 +35,7 @@ namespace AspNet5.Identity.MongoDB
 		public IdentityRole() { }
 
 		/// <summary>
-		///     Constructor
+		/// Constructor
 		/// </summary>
 		/// <param name="roleName"></param>
 		public IdentityRole(string roleName) : this()
@@ -46,7 +46,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <summary>
 		/// Navigation property for claims in the role
 		/// </summary>
-		public virtual ICollection<IdentityClaim> Claims { get; } = new List<IdentityClaim>();
+		public virtual IList<IdentityClaim> Claims { get; } = new List<IdentityClaim>();
 
 		/// <summary>
 		/// Role id

@@ -9,12 +9,12 @@ namespace AspNet5.Identity.MongoDB
 	public class IdentityClaim
 	{
 		/// <summary>
-		///     Claim type
+		/// Claim type
 		/// </summary>
 		public virtual string ClaimType { get; set; }
 
 		/// <summary>
-		///     Claim value
+		/// Claim value
 		/// </summary>
 		public virtual string ClaimValue { get; set; }
 	}
