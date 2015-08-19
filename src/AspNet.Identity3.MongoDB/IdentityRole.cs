@@ -44,11 +44,6 @@ namespace AspNet5.Identity.MongoDB
 		}
 
 		/// <summary>
-		/// Navigation property for claims in the role
-		/// </summary>
-		public virtual IList<IdentityClaim> Claims { get; } = new List<IdentityClaim>();
-
-		/// <summary>
 		/// Role id
 		/// </summary>
 		public virtual TKey Id { get; set; }
@@ -57,12 +52,13 @@ namespace AspNet5.Identity.MongoDB
 		/// Role name
 		/// </summary>
 		public virtual string Name { get; set; }
+		
 		public virtual string NormalizedName { get; set; }
 
 		/// <summary>
-		/// A random value that should change whenever a role is persisted to the store
+		/// Navigation property for claims in the role
 		/// </summary>
-		public virtual string ConcurrencyStamp { get; set; } = Guid.NewGuid().ToString();
+		public virtual IList<IdentityClaim> Claims { get; set; } = new List<IdentityClaim>();
 
 		/// <summary>
 		/// Returns a friendly name

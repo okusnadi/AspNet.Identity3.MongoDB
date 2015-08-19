@@ -15,13 +15,17 @@ namespace AspNet5.Identity.MongoDB
 		where TUser : IdentityUser<string>
 		where TRole : IdentityRole<string>
 	{
-		public UserStore(string connectionString, string databaseName = null, string collectionName = null, IdentityErrorDescriber describer = null) : base(connectionString, databaseName, collectionName, describer) { }
+		public UserStore(string connectionString, string databaseName = null, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null) : 
+			base(connectionString, databaseName, collectionName, collectionSettings, describer) { }
 
-		public UserStore(IMongoClient client, string databaseName = null, string collectionName = null, IdentityErrorDescriber describer = null) : base(client, databaseName, collectionName, describer) { }
+		public UserStore(IMongoClient client, string databaseName = null, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null) : 
+			base(client, databaseName, collectionName, collectionSettings, describer) { }
 
-		public UserStore(IMongoDatabase database, string collectionName = null, IdentityErrorDescriber describer = null) : base(database, collectionName, describer) { }
+		public UserStore(IMongoDatabase database, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null) : 
+			base(database, collectionName, collectionSettings, describer) { }
 
-		public UserStore(IMongoCollection<TUser> collection, IdentityErrorDescriber describer = null) : base(collection, describer) { }
+		public UserStore(IMongoCollection<TUser> collection, IdentityErrorDescriber describer = null) : 
+			base(collection, describer) { }
 	}
 
 	public class UserStore<TUser, TRole, TKey> :
@@ -41,28 +45,28 @@ namespace AspNet5.Identity.MongoDB
 	{
 		#region Constructor and MongoDB Connections
 
-		protected string _databaseName = DefaultNames.Database;
-		protected string _collectionName = DefaultNames.UserCollection;
+		protected string _databaseName;
+		protected string _collectionName;
 		protected IMongoClient _client;
 		protected IMongoDatabase _database;
 		protected IMongoCollection<TUser> _collection;
 
-		public UserStore(string connectionString, string databaseName = null, string collectionName = null, IdentityErrorDescriber describer = null)
+		public UserStore(string connectionString, string databaseName = null, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null)
 		{
 			SetProperties(databaseName, collectionName, describer);
-			SetDbConnection(connectionString);
+			SetDbConnection(connectionString, collectionSettings);
 		}
 
-		public UserStore(IMongoClient client, string databaseName = null, string collectionName = null, IdentityErrorDescriber describer = null)
+		public UserStore(IMongoClient client, string databaseName = null, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null)
 		{
 			SetProperties(databaseName, collectionName, describer);
-			SetDbConnection(client);
+			SetDbConnection(client, collectionSettings);
 		}
 
-		public UserStore(IMongoDatabase database, string collectionName = null, IdentityErrorDescriber describer = null)
+		public UserStore(IMongoDatabase database, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null)
 		{
 			SetProperties(database.DatabaseNamespace.DatabaseName, collectionName, describer);
-			SetDbConnection(database);
+			SetDbConnection(database, collectionSettings);
 		}
 
 		public UserStore(IMongoCollection<TUser> collection, IdentityErrorDescriber describer = null)
@@ -76,8 +80,8 @@ namespace AspNet5.Identity.MongoDB
 
 		protected void SetProperties(string databaseName, string collectionName, IdentityErrorDescriber describer)
 		{
-			if (!string.IsNullOrWhiteSpace(databaseName)) _databaseName = databaseName;
-			if (!string.IsNullOrWhiteSpace(collectionName)) _collectionName = collectionName;
+			_databaseName = string.IsNullOrWhiteSpace(databaseName) ? DefaultSettings.DatabaseName : databaseName;
+			_collectionName = string.IsNullOrWhiteSpace(collectionName) ? DefaultSettings.UserCollectionName : collectionName;
 			ErrorDescriber = describer ?? new IdentityErrorDescriber();
 		}
 
@@ -85,29 +89,30 @@ namespace AspNet5.Identity.MongoDB
 		/// IMPORTANT: ensure _databaseName and _collectionName are set (if needed) before calling this
 		/// </summary>
 		/// <param name="connectionString"></param>
-		protected void SetDbConnection(string connectionString)
+		protected void SetDbConnection(string connectionString, MongoCollectionSettings collectionSettings)
 		{
-			SetDbConnection(new MongoClient(connectionString));
+			SetDbConnection(new MongoClient(connectionString), collectionSettings);
 		}
 
 		/// <summary>
 		/// IMPORTANT: ensure _databaseName and _collectionName are set (if needed) before calling this
 		/// </summary>
 		/// <param name="client"></param>
-		protected void SetDbConnection(IMongoClient client)
+		protected void SetDbConnection(IMongoClient client, MongoCollectionSettings collectionSettings)
 		{
-			SetDbConnection(client.GetDatabase(_databaseName));
+			SetDbConnection(client.GetDatabase(_databaseName), collectionSettings);
 		}
 
 		/// <summary>
 		/// IMPORTANT: ensure _collectionName is set (if needed) before calling this
 		/// </summary>
 		/// <param name="database"></param>
-		protected void SetDbConnection(IMongoDatabase database)
+		protected void SetDbConnection(IMongoDatabase database, MongoCollectionSettings collectionSettings)
 		{
 			_database = database;
 			_client = _database.Client;
-			_collection = _database.GetCollection<TUser>(_collectionName);
+			collectionSettings = collectionSettings ?? DefaultSettings.CollectionSettings();
+			_collection = _database.GetCollection<TUser>(_collectionName, collectionSettings);
 		}
 
 

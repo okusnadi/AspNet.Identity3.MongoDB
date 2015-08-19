@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AspNet5.Identity.MongoDB;
+using Microsoft.AspNet.Identity;
 using MongoDB.Driver;
 using Xunit;
 
@@ -14,11 +14,17 @@ namespace AspNet.Identity3.MongoDB.Tests
 		protected IMongoCollection<IdentityRole> roleCollection;
 		//protected IMongoCollection<IdentityUser> userCollection;
 
+		protected RoleStore<IdentityRole> roleStore;
+		protected IdentityErrorDescriber ErrorDescriber;
+
 		public RoleStoreTests()
 		{
 			DatabaseFixture = new DatabaseFixture<RoleStoreTests>();
 			roleCollection = DatabaseFixture.GetCollection<IdentityRole>();
 			//userCollection = DatabaseFixture.GetCollection<IdentityUser>();
+
+			roleStore = new RoleStore<IdentityRole>(roleCollection);
+			ErrorDescriber = new IdentityErrorDescriber();
 		}
 
 		public void Dispose()
@@ -129,7 +135,133 @@ namespace AspNet.Identity3.MongoDB.Tests
 
 		public class CreateAsyncMethod : RoleStoreTests
 		{
-			
+			[Fact]
+			public async Task Create_role_returns_Success()
+			{
+				// arrange
+				var claim1 = new IdentityClaim { ClaimType = "ClaimType1", ClaimValue = "some value" };
+				var claim2 = new IdentityClaim { ClaimType = "ClaimType2", ClaimValue = "some other value" };
+				var role = new IdentityRole("some role");
+				role.Claims.Add(claim1);
+				role.Claims.Add(claim2);
+
+				// act
+				var result = await roleStore.CreateAsync(role);
+
+				// assert
+				IdentityResultAssert.IsSuccess(result);
+
+				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				IdentityRoleAssert.Equal(role, roleFromDb);
+			}
+
+
+			[Fact]
+			public async Task Creating_same_role_twice_returns_DuplicateRoleName_error()
+			{
+				// arrange
+				var role = new IdentityRole("some role");
+
+				// act
+				var result1 = await roleStore.CreateAsync(role);
+
+				role.Name = "a different name, but same Id";
+				var result2 = await roleStore.CreateAsync(role);
+
+				// assert
+				IdentityResultAssert.IsSuccess(result1);
+
+				var expectedError = IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.ToString()));
+				IdentityResultAssert.IsFailure(result2, expectedError.Errors.FirstOrDefault());
+			}
+
+			[Fact]
+			public async Task Creating_two_different_roles_but_same_Name_returns_DuplicateRoleName_error()
+			{
+				// arrange
+				var role1 = new IdentityRole("some role name");
+				var role2 = new IdentityRole(role1.Name);
+
+				// act
+				var result1 = await roleStore.CreateAsync(role1);
+				var result2 = await roleStore.CreateAsync(role2);
+
+				// assert
+				IdentityResultAssert.IsSuccess(result1);
+
+				var expectedError = IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role2.ToString()));
+				IdentityResultAssert.IsFailure(result2, expectedError.Errors.FirstOrDefault());
+			}
+		}
+
+		public class UpdateAsyncMethod : RoleStoreTests
+		{
+			[Fact]
+			public async Task Update_role_returns_Success()
+			{
+				// arrange
+				var claim1 = new IdentityClaim { ClaimType = "ClaimType1", ClaimValue = "some value" };
+				var claim2 = new IdentityClaim { ClaimType = "ClaimType2", ClaimValue = "some other value" };
+				var role = new IdentityRole("some role");
+				role.Claims.Add(claim1);
+
+				// initial role creation
+				await roleStore.CreateAsync(role);
+				role.Name = "a new name";
+				role.Claims.Add(claim2);
+
+
+				// act
+				var result = await roleStore.UpdateAsync(role);
+
+				// assert
+				IdentityResultAssert.IsSuccess(result);
+
+				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				IdentityRoleAssert.Equal(role, roleFromDb);
+			}
+
+
+			[Fact]
+			public async Task Can_update_role_multiple_times()
+			{
+				// arrange
+				var role = new IdentityRole("some role");
+				await roleStore.CreateAsync(role);
+
+				// act
+				role.Claims.Add(new IdentityClaim { ClaimType = "ClaimType1", ClaimValue = "claim value" });
+				var result1 = await roleStore.UpdateAsync(role);
+
+				role.Name = "a different name";
+				var result2 = await roleStore.UpdateAsync(role);
+
+				// assert
+				IdentityResultAssert.IsSuccess(result1);
+				IdentityResultAssert.IsSuccess(result2);
+
+				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				IdentityRoleAssert.Equal(role, roleFromDb);
+			}
+
+			[Fact]
+			public async Task Updating_role_name_to_existing_name_returns_DuplicateRoleName_error()
+			{
+				// arrange
+				var role1 = new IdentityRole("some role");
+				var role2 = new IdentityRole("another role");
+
+				var result1 = await roleStore.CreateAsync(role1);
+				var result2 = await roleStore.CreateAsync(role2);
+
+				// act
+				role2.Name = role1.Name;
+				var result = await roleStore.UpdateAsync(role2);
+
+				// assert
+				var expectedError = IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role2.ToString()));
+				IdentityResultAssert.IsFailure(result2, expectedError.Errors.FirstOrDefault());
+			}
 		}
 
 

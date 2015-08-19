@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using AspNet5.Identity.MongoDB;
 using Microsoft.Framework.Configuration;
 using MongoDB.Driver;
 
@@ -25,7 +28,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 		public DatabaseFixture(string databaseName = null) : this(databaseName, true, false) { }
 		public DatabaseFixture(string databaseName, bool dropDatabaseOnInit, bool dropDatabaseOnDispose)
 		{
-			
+			RegisterClassMap<IdentityUser, IdentityRole, string>.Init();
 
 			//Below code demonstrates usage of multiple configuration sources. For instance a setting say 'setting1' is found in both the registered sources, 
 			//then the later source will win. By this way a Local config can be overridden by a different setting while deployed remotely.
@@ -55,6 +58,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 		public void DropDatabase()
 		{
 			GetMongoClient().DropDatabaseAsync(DatabaseName);
+			Thread.Sleep(500);
 		}
 
 		public IMongoClient GetMongoClient()
@@ -75,8 +79,10 @@ namespace AspNet.Identity3.MongoDB.Tests
 		public IMongoCollection<T> GetCollection<T>()
 		{
 			var collectionName = typeof(T).Name;
+			var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.WMajority };
 			_mongoCollectionNames.Add(collectionName);
-			return GetMongoDatabase().GetCollection<T>(collectionName);
+			
+			return GetMongoDatabase().GetCollection<T>(collectionName, collectionSettings);
 		}
 		private IList<string> _mongoCollectionNames = new List<string>();
 	}

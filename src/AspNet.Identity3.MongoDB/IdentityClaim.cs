@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace AspNet5.Identity.MongoDB
+﻿namespace AspNet5.Identity.MongoDB
 {
 	/// <summary>
 	/// EntityType that represents one specific claim

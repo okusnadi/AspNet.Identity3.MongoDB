@@ -14,13 +14,17 @@ namespace AspNet5.Identity.MongoDB
 		RoleStore<TRole, string>
 		where TRole : IdentityRole<string>
 	{
-		public RoleStore(string connectionString, string databaseName = null, string collectionName = null) : base(connectionString, databaseName, collectionName) { }
+		public RoleStore(string connectionString, string databaseName = null, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null) : 
+			base(connectionString, databaseName, collectionName, collectionSettings, describer) { }
 
-		public RoleStore(IMongoClient client, string databaseName = null, string collectionName = null) : base(client, databaseName, collectionName) { }
+		public RoleStore(IMongoClient client, string databaseName = null, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null) : 
+			base(client, databaseName, collectionName, collectionSettings, describer) { }
 
-		public RoleStore(IMongoDatabase database, string collectionName = null) : base(database, collectionName) { }
+		public RoleStore(IMongoDatabase database, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null) : 
+			base(database, collectionName, collectionSettings, describer) { }
 
-		public RoleStore(IMongoCollection<TRole> collection) : base(collection) { }
+		public RoleStore(IMongoCollection<TRole> collection, IdentityErrorDescriber describer = null) : 
+			base(collection, describer) { }
 	}
 
 	public class RoleStore<TRole, TKey> :
@@ -31,76 +35,92 @@ namespace AspNet5.Identity.MongoDB
 	{
 		#region Constructor and MongoDB Connections
 	
-		protected string _databaseName = DefaultNames.Database;
-		protected string _collectionName = DefaultNames.RoleCollection;
+		protected string _databaseName;
+		protected string _collectionName;
 		protected IMongoClient _client;
 		protected IMongoDatabase _database;
 		protected IMongoCollection<TRole> _collection;
 
-		public RoleStore(string connectionString, string databaseName = null, string collectionName = null)
+		public RoleStore(string connectionString, string databaseName = null, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null)
 		{
-			SetProperties(databaseName, collectionName);
-			SetDbConnection(connectionString);
+			if(string.IsNullOrWhiteSpace(connectionString)) throw new ArgumentNullException("connectionString");
+
+			SetProperties(databaseName, collectionName, describer);
+			SetDbConnection(connectionString, collectionSettings);
 		}
 
-		public RoleStore(IMongoClient client, string databaseName = null, string collectionName = null)
+		public RoleStore(IMongoClient client, string databaseName = null, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null)
 		{
-			SetProperties(databaseName, collectionName);
-			SetDbConnection(client);
+			if(client == null) throw new ArgumentNullException("client");
+
+			SetProperties(databaseName, collectionName, describer);
+			SetDbConnection(client, collectionSettings);
 		}
 
-		public RoleStore(IMongoDatabase database, string collectionName = null)
+		public RoleStore(IMongoDatabase database, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null)
 		{
-			SetProperties(database.DatabaseNamespace.DatabaseName, collectionName);
-			SetDbConnection(database);
+			if(database == null) throw new ArgumentNullException("database");
+
+			SetProperties(database.DatabaseNamespace.DatabaseName, collectionName, describer);
+			SetDbConnection(database, collectionSettings);
 		}
 
-		public RoleStore(IMongoCollection<TRole> collection)
+		public RoleStore(IMongoCollection<TRole> collection, IdentityErrorDescriber describer = null)
 		{
+			if(collection == null) throw new ArgumentNullException("collection");
+
 			_collection = collection;
 			_database = collection.Database;
 			_client = _database.Client;
 
-			SetProperties(_database.DatabaseNamespace.DatabaseName, _collection.CollectionNamespace.CollectionName);
+			SetProperties(_database.DatabaseNamespace.DatabaseName, _collection.CollectionNamespace.CollectionName, describer);
 		}
 
-		protected void SetProperties(string databaseName, string collectionName)
+		protected void SetProperties(string databaseName, string collectionName, IdentityErrorDescriber describer)
 		{
-			if (!string.IsNullOrWhiteSpace(databaseName)) _databaseName =  databaseName;
-			if (!string.IsNullOrWhiteSpace(collectionName)) _collectionName = collectionName;
+			_databaseName = string.IsNullOrWhiteSpace(databaseName) ? DefaultSettings.DatabaseName : databaseName;
+			_collectionName = string.IsNullOrWhiteSpace(collectionName) ? DefaultSettings.RoleCollectionName : collectionName;
+			ErrorDescriber = describer ?? new IdentityErrorDescriber();
 		}
 
 		/// <summary>
 		/// IMPORTANT: ensure _databaseName and _collectionName are set (if needed) before calling this
 		/// </summary>
 		/// <param name="connectionString"></param>
-		protected void SetDbConnection(string connectionString)
+		protected void SetDbConnection(string connectionString, MongoCollectionSettings collectionSettings)
 		{
-			SetDbConnection(new MongoClient(connectionString));
+			SetDbConnection(new MongoClient(connectionString), collectionSettings);
 		}
 
 		/// <summary>
 		/// IMPORTANT: ensure _databaseName and _collectionName are set (if needed) before calling this
 		/// </summary>
 		/// <param name="client"></param>
-		protected void SetDbConnection(IMongoClient client)
+		protected void SetDbConnection(IMongoClient client, MongoCollectionSettings collectionSettings)
 		{
-			SetDbConnection(client.GetDatabase(_databaseName));
+			SetDbConnection(client.GetDatabase(_databaseName), collectionSettings);
 		}
 
 		/// <summary>
 		/// IMPORTANT: ensure _collectionName is set (if needed) before calling this
 		/// </summary>
 		/// <param name="database"></param>
-		protected void SetDbConnection(IMongoDatabase database)
+		protected void SetDbConnection(IMongoDatabase database, MongoCollectionSettings collectionSettings)
 		{
 			_database = database;
 			_client = _database.Client;
-			_collection = _database.GetCollection<TRole>(_collectionName);
+			collectionSettings = collectionSettings ?? DefaultSettings.CollectionSettings();
+
+			_collection = _database.GetCollection<TRole>(_collectionName, collectionSettings);
 		}
 
 		#endregion
-		
+
+		/// <summary>
+		/// Used to generate public API error messages
+		/// </summary>
+		public virtual IdentityErrorDescriber ErrorDescriber { get; set; }
+
 		#region IRoleStore<TRole> (base interface for both IQueryableRoleStore<TRole> and IRoleClaimStore<TRole>)
 
 		/// <summary>
@@ -109,9 +129,22 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role to create in the store.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that represents the <see cref="IdentityResult"/> of the asynchronous query.</returns>
-		public virtual Task<IdentityResult> CreateAsync(TRole role, CancellationToken cancellationToken)
+		public virtual async Task<IdentityResult> CreateAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			ThrowIfDisposed();
+			if(role == null) throw new ArgumentNullException("role");
+			if (await RoleDetailsAlreadyExists(role, cancellationToken)) return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.ToString()));
+
+			try
+			{
+				await _collection.InsertOneAsync(role, cancellationToken);
+			}
+			catch(MongoWriteException)
+			{
+				return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.ToString()));
+			}
+
+			return IdentityResult.Success;
 		}
 
 		/// <summary>
@@ -120,9 +153,24 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role to update in the store.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that represents the <see cref="IdentityResult"/> of the asynchronous query.</returns>
-		public virtual Task<IdentityResult> UpdateAsync(TRole role, CancellationToken cancellationToken)
+		public virtual async Task<IdentityResult> UpdateAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			ThrowIfDisposed();
+			if(role == null) throw new ArgumentNullException("role");
+			if(await RoleDetailsAlreadyExists(role, cancellationToken)) return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.ToString()));
+
+
+			try
+			{
+				var filter = Builders<TRole>.Filter.Eq(x => x.Id, role.Id);
+				await _collection.ReplaceOneAsync(filter, role, null, cancellationToken);
+			}
+			catch(MongoWriteException)
+			{
+				return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.ToString()));
+			}
+
+			return IdentityResult.Success;
 		}
 
 		/// <summary>
@@ -131,7 +179,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role to delete from the store.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that represents the <see cref="IdentityResult"/> of the asynchronous query.</returns>
-		public virtual Task<IdentityResult> DeleteAsync(TRole role, CancellationToken cancellationToken)
+		public virtual Task<IdentityResult> DeleteAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			throw new NotImplementedException();
 		}
@@ -142,7 +190,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role whose ID should be returned.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that contains the ID of the role.</returns>
-		public virtual Task<string> GetRoleIdAsync(TRole role, CancellationToken cancellationToken)
+		public virtual Task<string> GetRoleIdAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			throw new NotImplementedException();
 		}
@@ -153,7 +201,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role whose name should be returned.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that contains the name of the role.</returns>
-		public virtual Task<string> GetRoleNameAsync(TRole role, CancellationToken cancellationToken)
+		public virtual Task<string> GetRoleNameAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			throw new NotImplementedException();
 		}
@@ -164,7 +212,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role whose normalized name should be retrieved.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that contains the name of the role.</returns>
-		public virtual Task<string> GetNormalizedRoleNameAsync(TRole role, CancellationToken cancellationToken)
+		public virtual Task<string> GetNormalizedRoleNameAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			throw new NotImplementedException();
 		}
@@ -175,7 +223,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="roleId">The role ID to look for.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that result of the look up.</returns>
-		public virtual Task<TRole> FindByIdAsync(string roleId, CancellationToken cancellationToken)
+		public virtual Task<TRole> FindByIdAsync(string roleId, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			throw new NotImplementedException();
 		}
@@ -186,7 +234,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="normalizedRoleName">The normalized role name to look for.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that result of the look up.</returns>
-		public virtual Task<TRole> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
+		public virtual Task<TRole> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			throw new NotImplementedException();
 		}
@@ -198,7 +246,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="roleName">The name of the role.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public virtual Task SetRoleNameAsync(TRole role, string roleName, CancellationToken cancellationToken)
+		public virtual Task SetRoleNameAsync(TRole role, string roleName, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			throw new NotImplementedException();
 		}
@@ -210,7 +258,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="normalizedName">The normalized name to set</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public virtual Task SetNormalizedRoleNameAsync(TRole role, string normalizedName, CancellationToken cancellationToken)
+		public virtual Task SetNormalizedRoleNameAsync(TRole role, string normalizedName, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			throw new NotImplementedException();
 		}
@@ -310,7 +358,7 @@ namespace AspNet5.Identity.MongoDB
 			}
 		}
 
-		protected virtual Task<UpdateResult> DoClaimUpdate(TKey roleId, ICollection<IdentityClaim> claims, CancellationToken cancellationToken)
+		protected virtual Task<UpdateResult> DoClaimUpdate(TKey roleId, ICollection<IdentityClaim> claims, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			// update role claims in the database
 			var filter = Builders<TRole>.Filter.Eq(x => x.Id, roleId);
@@ -340,6 +388,29 @@ namespace AspNet5.Identity.MongoDB
 			{
 				throw new ObjectDisposedException(GetType().Name);
 			}
+		}
+
+		#endregion
+
+		#region PROTECTED HELPER METHODS
+
+		/// <summary>
+		/// Role names are distinct, and should never have two roles with the same name
+		/// </summary>
+		/// <remarks>
+		/// Can override to have different "distinct role details" implementation if necessary.
+		/// </remarks>
+		/// <param name="role"></param>
+		/// <param name="cancellationToken"></param>
+		/// <returns></returns>
+		protected virtual async Task<bool> RoleDetailsAlreadyExists(TRole role, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			// if the result does exist, make sure its not for the same role object (ie same name, but different Ids)
+			var fBuilder = Builders<TRole>.Filter;
+			var filter = fBuilder.Ne(x => x.Id, role.Id) & fBuilder.Eq(x => x.Name, role.Name);
+
+			var result = await _collection.Find(filter).FirstOrDefaultAsync();
+			return result != null;
 		}
 
 		#endregion
