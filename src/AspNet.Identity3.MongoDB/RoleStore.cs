@@ -1,28 +1,41 @@
-﻿using Microsoft.AspNet.Identity;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using AspNet.Identity3.MongoDB;
+using Microsoft.AspNet.Identity;
 using MongoDB.Driver;
 
 namespace AspNet5.Identity.MongoDB
 {
+	public class RoleStore<TRole> : 
+		RoleStore<TRole, string>
+		where TRole : IdentityRole<string>
+	{
+		public RoleStore(string connectionString, string databaseName = null, string collectionName = null) : base(connectionString, databaseName, collectionName) { }
+
+		public RoleStore(IMongoClient client, string databaseName = null, string collectionName = null) : base(client, databaseName, collectionName) { }
+
+		public RoleStore(IMongoDatabase database, string collectionName = null) : base(database, collectionName) { }
+
+		public RoleStore(IMongoCollection<TRole> collection) : base(collection) { }
+	}
+
 	public class RoleStore<TRole, TKey> :
 		IQueryableRoleStore<TRole>,
 		IRoleClaimStore<TRole>
 		where TRole : IdentityRole<TKey>
 		where TKey : IEquatable<TKey>
-
 	{
 		#region Constructor and MongoDB Connections
-
-		protected static string _databaseName = "AspNetIdentity";
-		protected static string _collectionName = "AspNetRoles";
-		protected static IMongoClient _client;
-		protected static IMongoDatabase _database;
-		protected static IMongoCollection<TRole> _collection;
+	
+		protected string _databaseName = DefaultNames.Database;
+		protected string _collectionName = DefaultNames.RoleCollection;
+		protected IMongoClient _client;
+		protected IMongoDatabase _database;
+		protected IMongoCollection<TRole> _collection;
 
 		public RoleStore(string connectionString, string databaseName = null, string collectionName = null)
 		{
@@ -96,7 +109,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role to create in the store.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that represents the <see cref="IdentityResult"/> of the asynchronous query.</returns>
-		public Task<IdentityResult> CreateAsync(TRole role, CancellationToken cancellationToken)
+		public virtual Task<IdentityResult> CreateAsync(TRole role, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -107,7 +120,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role to update in the store.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that represents the <see cref="IdentityResult"/> of the asynchronous query.</returns>
-		public Task<IdentityResult> UpdateAsync(TRole role, CancellationToken cancellationToken)
+		public virtual Task<IdentityResult> UpdateAsync(TRole role, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -118,7 +131,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role to delete from the store.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that represents the <see cref="IdentityResult"/> of the asynchronous query.</returns>
-		public Task<IdentityResult> DeleteAsync(TRole role, CancellationToken cancellationToken)
+		public virtual Task<IdentityResult> DeleteAsync(TRole role, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -129,7 +142,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role whose ID should be returned.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that contains the ID of the role.</returns>
-		public Task<string> GetRoleIdAsync(TRole role, CancellationToken cancellationToken)
+		public virtual Task<string> GetRoleIdAsync(TRole role, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -140,7 +153,40 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role whose name should be returned.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that contains the name of the role.</returns>
-		public Task<string> GetRoleNameAsync(TRole role, CancellationToken cancellationToken)
+		public virtual Task<string> GetRoleNameAsync(TRole role, CancellationToken cancellationToken)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Get a role's normalized name as an asynchronous operation.
+		/// </summary>
+		/// <param name="role">The role whose normalized name should be retrieved.</param>
+		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
+		/// <returns>A <see cref="Task{TResult}"/> that contains the name of the role.</returns>
+		public virtual Task<string> GetNormalizedRoleNameAsync(TRole role, CancellationToken cancellationToken)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Finds the role who has the specified ID as an asynchronous operation.
+		/// </summary>
+		/// <param name="roleId">The role ID to look for.</param>
+		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
+		/// <returns>A <see cref="Task{TResult}"/> that result of the look up.</returns>
+		public virtual Task<TRole> FindByIdAsync(string roleId, CancellationToken cancellationToken)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Finds the role who has the specified normalized name as an asynchronous operation.
+		/// </summary>
+		/// <param name="normalizedRoleName">The normalized role name to look for.</param>
+		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
+		/// <returns>A <see cref="Task{TResult}"/> that result of the look up.</returns>
+		public virtual Task<TRole> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -152,18 +198,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="roleName">The name of the role.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task SetRoleNameAsync(TRole role, string roleName, CancellationToken cancellationToken)
-		{
-			throw new NotImplementedException();
-		}
-
-		/// <summary>
-		/// Get a role's normalized name as an asynchronous operation.
-		/// </summary>
-		/// <param name="role">The role whose normalized name should be retrieved.</param>
-		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
-		/// <returns>A <see cref="Task{TResult}"/> that contains the name of the role.</returns>
-		public Task<string> GetNormalizedRoleNameAsync(TRole role, CancellationToken cancellationToken)
+		public virtual Task SetRoleNameAsync(TRole role, string roleName, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -175,30 +210,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="normalizedName">The normalized name to set</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task SetNormalizedRoleNameAsync(TRole role, string normalizedName, CancellationToken cancellationToken)
-		{
-			throw new NotImplementedException();
-		}
-
-
-		/// <summary>
-		/// Finds the role who has the specified ID as an asynchronous operation.
-		/// </summary>
-		/// <param name="roleId">The role ID to look for.</param>
-		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
-		/// <returns>A <see cref="Task{TResult}"/> that result of the look up.</returns>
-		public Task<TRole> FindByIdAsync(string roleId, CancellationToken cancellationToken)
-		{
-			throw new NotImplementedException();
-		}
-
-		/// <summary>
-		/// Finds the role who has the specified normalized name as an asynchronous operation.
-		/// </summary>
-		/// <param name="normalizedRoleName">The normalized role name to look for.</param>
-		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
-		/// <returns>A <see cref="Task{TResult}"/> that result of the look up.</returns>
-		public Task<TRole> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
+		public virtual Task SetNormalizedRoleNameAsync(TRole role, string normalizedName, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -211,7 +223,7 @@ namespace AspNet5.Identity.MongoDB
 		/// Returns an <see cref="IQueryable{T}"/> collection of roles.
 		/// </summary>
 		/// <value>An <see cref="IQueryable{T}"/> collection of roles.</value>
-		public IQueryable<TRole> Roles
+		public virtual IQueryable<TRole> Roles
 		{
 			get
 			{
@@ -231,7 +243,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>
 		/// A <see cref="Task{TResult}"/> that represents the result of the asynchronous query, a list of <see cref="Claim"/>s.
 		/// </returns>
-		public Task<IList<Claim>> GetClaimsAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
+		public virtual Task<IList<Claim>> GetClaimsAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
 			if (role == null) throw new ArgumentNullException("role");
@@ -247,7 +259,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="claim">The <see cref="Claim"/> to add.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public Task AddClaimAsync(TRole role, Claim claim, CancellationToken cancellationToken = default(CancellationToken))
+		public virtual Task AddClaimAsync(TRole role, Claim claim, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
 			if (role == null) throw new ArgumentNullException("role");
@@ -284,7 +296,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="claim">The <see cref="Claim"/> to remove.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public async Task RemoveClaimAsync(TRole role, Claim claim, CancellationToken cancellationToken = default(CancellationToken))
+		public virtual async Task RemoveClaimAsync(TRole role, Claim claim, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
 			if (role == null) throw new ArgumentNullException("role");
@@ -298,7 +310,7 @@ namespace AspNet5.Identity.MongoDB
 			}
 		}
 
-		protected Task<UpdateResult> DoClaimUpdate(TKey roleId, ICollection<IdentityClaim> claims, CancellationToken cancellationToken)
+		protected virtual Task<UpdateResult> DoClaimUpdate(TKey roleId, ICollection<IdentityClaim> claims, CancellationToken cancellationToken)
 		{
 			// update role claims in the database
 			var filter = Builders<TRole>.Filter.Eq(x => x.Id, roleId);
@@ -313,7 +325,7 @@ namespace AspNet5.Identity.MongoDB
 		private bool _disposed = false; // To detect redundant calls
 
 
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			_disposed = true;
 		}
@@ -322,7 +334,7 @@ namespace AspNet5.Identity.MongoDB
 		/// Throws if disposed.
 		/// </summary>
 		/// <exception cref="System.ObjectDisposedException"></exception>
-		protected void ThrowIfDisposed()
+		protected virtual void ThrowIfDisposed()
 		{
 			if (_disposed)
 			{

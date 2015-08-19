@@ -6,9 +6,24 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using AspNet.Identity3.MongoDB;
 
 namespace AspNet5.Identity.MongoDB
 {
+	public class UserStore<TUser, TRole> 
+		: UserStore<TUser, TRole, string>
+		where TUser : IdentityUser<string>
+		where TRole : IdentityRole<string>
+	{
+		public UserStore(string connectionString, string databaseName = null, string collectionName = null, IdentityErrorDescriber describer = null) : base(connectionString, databaseName, collectionName, describer) { }
+
+		public UserStore(IMongoClient client, string databaseName = null, string collectionName = null, IdentityErrorDescriber describer = null) : base(client, databaseName, collectionName, describer) { }
+
+		public UserStore(IMongoDatabase database, string collectionName = null, IdentityErrorDescriber describer = null) : base(database, collectionName, describer) { }
+
+		public UserStore(IMongoCollection<TUser> collection, IdentityErrorDescriber describer = null) : base(collection, describer) { }
+	}
+
 	public class UserStore<TUser, TRole, TKey> :
 		IUserLoginStore<TUser>,
 		IUserRoleStore<TUser>,
@@ -26,8 +41,8 @@ namespace AspNet5.Identity.MongoDB
 	{
 		#region Constructor and MongoDB Connections
 
-		protected string _databaseName = "AspNetIdentity";
-		protected string _collectionName = "AspNetUsers";
+		protected string _databaseName = DefaultNames.Database;
+		protected string _collectionName = DefaultNames.UserCollection;
 		protected IMongoClient _client;
 		protected IMongoDatabase _database;
 		protected IMongoCollection<TUser> _collection;
@@ -101,7 +116,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <summary>
 		/// Used to generate public API error messages
 		/// </summary>
-		public IdentityErrorDescriber ErrorDescriber { get; set; }
+		public virtual IdentityErrorDescriber ErrorDescriber { get; set; }
 
 		#region IUserStore<TUser> (base inteface for the other interfaces)
 		/// <summary>
@@ -110,7 +125,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user whose identifier should be retrieved.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the identifier for the specified <paramref name="user"/>.</returns>
-		public Task<string> GetUserIdAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<string> GetUserIdAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -121,7 +136,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user whose name should be retrieved.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the name for the specified <paramref name="user"/>.</returns>
-		public Task<string> GetUserNameAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<string> GetUserNameAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -133,7 +148,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="userName">The user name to set.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task SetUserNameAsync(TUser user, string userName, CancellationToken cancellationToken)
+		public virtual Task SetUserNameAsync(TUser user, string userName, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -144,7 +159,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user whose normalized name should be retrieved.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the normalized user name for the specified <paramref name="user"/>.</returns>
-		public Task<string> GetNormalizedUserNameAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<string> GetNormalizedUserNameAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -156,7 +171,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="userName">The normalized name to set.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task SetNormalizedUserNameAsync(TUser user, string normalizedName, CancellationToken cancellationToken)
+		public virtual Task SetNormalizedUserNameAsync(TUser user, string normalizedName, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -167,7 +182,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user to create.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the <see cref="IdentityResult"/> of the creation operation.</returns>
-		public Task<IdentityResult> CreateAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<IdentityResult> CreateAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -178,7 +193,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user to update.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the <see cref="IdentityResult"/> of the update operation.</returns>
-		public Task<IdentityResult> UpdateAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<IdentityResult> UpdateAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -189,7 +204,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user to delete.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the <see cref="IdentityResult"/> of the update operation.</returns>
-		public Task<IdentityResult> DeleteAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<IdentityResult> DeleteAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -202,7 +217,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>
 		/// The <see cref="Task"/> that represents the asynchronous operation, containing the user matching the specified <paramref name="userID"/> if it exists.
 		/// </returns>
-		public Task<TUser> FindByIdAsync(string userId, CancellationToken cancellationToken)
+		public virtual Task<TUser> FindByIdAsync(string userId, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -215,7 +230,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>
 		/// The <see cref="Task"/> that represents the asynchronous operation, containing the user matching the specified <paramref name="userID"/> if it exists.
 		/// </returns>
-		public Task<TUser> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
+		public virtual Task<TUser> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -231,7 +246,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="login">The external <see cref="UserLoginInfo"/> to add to the specified <paramref name="user"/>.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task AddLoginAsync(TUser user, UserLoginInfo login, CancellationToken cancellationToken)
+		public virtual Task AddLoginAsync(TUser user, UserLoginInfo login, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -248,7 +263,7 @@ namespace AspNet5.Identity.MongoDB
 		/// The <see cref="Task"/> that contains a flag the result of the asynchronous removing operation. The flag will be true if
 		/// the login information was existed and removed, otherwise false.
 		/// </returns>
-		public Task RemoveLoginAsync(TUser user, string loginProvider, string providerKey, CancellationToken cancellationToken)
+		public virtual Task RemoveLoginAsync(TUser user, string loginProvider, string providerKey, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -261,7 +276,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>
 		/// The <see cref="Task"/> for the asynchronous operation, containing a list of <see cref="UserLoginInfo"/> for the specified <paramref name="user"/>, if any.
 		/// </returns>
-		public Task<IList<UserLoginInfo>> GetLoginsAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<IList<UserLoginInfo>> GetLoginsAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -275,7 +290,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>
 		/// The <see cref="Task"/> for the asynchronous operation, containing the user, if any which matched the specified login provider and key.
 		/// </returns>
-		public Task<TUser> FindByLoginAsync(string loginProvider, string providerKey, CancellationToken cancellationToken)
+		public virtual Task<TUser> FindByLoginAsync(string loginProvider, string providerKey, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -291,7 +306,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="roleName">The name of the role to add the user to.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task AddToRoleAsync(TUser user, string roleName, CancellationToken cancellationToken)
+		public virtual Task AddToRoleAsync(TUser user, string roleName, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -303,7 +318,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="roleName">The name of the role to remove.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task RemoveFromRoleAsync(TUser user, string roleName, CancellationToken cancellationToken)
+		public virtual Task RemoveFromRoleAsync(TUser user, string roleName, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -314,7 +329,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user whose role names to retrieve.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing a list of role names.</returns>
-		public Task<IList<string>> GetRolesAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<IList<string>> GetRolesAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -329,7 +344,7 @@ namespace AspNet5.Identity.MongoDB
 		/// The <see cref="Task"/> that represents the asynchronous operation, containing a flag indicating whether the specified <see cref="user"/> is
 		/// a member of the named role.
 		/// </returns>
-		public Task<bool> IsInRoleAsync(TUser user, string roleName, CancellationToken cancellationToken)
+		public virtual Task<bool> IsInRoleAsync(TUser user, string roleName, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -342,7 +357,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>
 		/// The <see cref="Task"/> that represents the asynchronous operation, containing a list of users who are in the named role.
 		/// </returns>
-		public Task<IList<TUser>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
+		public virtual Task<IList<TUser>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -359,7 +374,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>
 		/// A <see cref="Task{TResult}"/> that represents the result of the asynchronous query, a list of <see cref="Claim"/>s.
 		/// </returns>
-		public Task<IList<Claim>> GetClaimsAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<IList<Claim>> GetClaimsAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -371,7 +386,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="claims">The collection of <see cref="Claim"/>s to add.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public Task AddClaimsAsync(TUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
+		public virtual Task AddClaimsAsync(TUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -384,7 +399,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="newClaim">The new claim to replace the existing <paramref name="claim"/> with.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public Task ReplaceClaimAsync(TUser user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
+		public virtual Task ReplaceClaimAsync(TUser user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -396,7 +411,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="claims">A collection of <see cref="Claim"/>s to remove.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public Task RemoveClaimsAsync(TUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
+		public virtual Task RemoveClaimsAsync(TUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -410,7 +425,7 @@ namespace AspNet5.Identity.MongoDB
 		/// A <see cref="Task{TResult}"/> that represents the result of the asynchronous query, a list of <typeparamref name="TUser"/> who
 		/// contain the specified claim.
 		/// </returns>
-		public Task<IList<TUser>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken)
+		public virtual Task<IList<TUser>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -426,7 +441,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="passwordHash">The password hash to set.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task SetPasswordHashAsync(TUser user, string passwordHash, CancellationToken cancellationToken)
+		public virtual Task SetPasswordHashAsync(TUser user, string passwordHash, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -437,7 +452,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user whose password hash to retrieve.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, returning the password hash for the specified <paramref name="user"/>.</returns>
-		public Task<string> GetPasswordHashAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<string> GetPasswordHashAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -451,7 +466,7 @@ namespace AspNet5.Identity.MongoDB
 		/// The <see cref="Task"/> that represents the asynchronous operation, returning true if the specified <paramref name="user"/> has a password
 		/// otherwise false.
 		/// </returns>
-		public Task<bool> HasPasswordAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<bool> HasPasswordAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -467,7 +482,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="stamp">The security stamp to set.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task SetSecurityStampAsync(TUser user, string stamp, CancellationToken cancellationToken)
+		public virtual Task SetSecurityStampAsync(TUser user, string stamp, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -478,7 +493,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user whose security stamp should be set.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the security stamp for the specified <paramref name="user"/>.</returns>
-		public Task<string> GetSecurityStampAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<string> GetSecurityStampAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -494,7 +509,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="email">The email to set.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public Task SetEmailAsync(TUser user, string email, CancellationToken cancellationToken)
+		public virtual Task SetEmailAsync(TUser user, string email, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -505,7 +520,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user whose email should be returned.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object containing the results of the asynchronous operation, the email address for the specified <paramref name="user"/>.</returns>
-		public Task<string> GetEmailAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<string> GetEmailAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -520,7 +535,7 @@ namespace AspNet5.Identity.MongoDB
 		/// The task object containing the results of the asynchronous operation, a flag indicating whether the email address for the specified <paramref name="user"/>
 		/// has been confirmed or not.
 		/// </returns>
-		public Task<bool> GetEmailConfirmedAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<bool> GetEmailConfirmedAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -532,7 +547,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="confirmed">A flag indicating if the email address has been confirmed, true if the address is confirmed otherwise false.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public Task SetEmailConfirmedAsync(TUser user, bool confirmed, CancellationToken cancellationToken)
+		public virtual Task SetEmailConfirmedAsync(TUser user, bool confirmed, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -545,7 +560,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>
 		/// The task object containing the results of the asynchronous lookup operation, the user if any associated with the specified normalized email address.
 		/// </returns>
-		public Task<TUser> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
+		public virtual Task<TUser> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -558,7 +573,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>
 		/// The task object containing the results of the asynchronous lookup operation, the normalized email address if any associated with the specified user.
 		/// </returns>
-		public Task<string> GetNormalizedEmailAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<string> GetNormalizedEmailAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -570,7 +585,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="normalizedEmail">The normalized email to set for the specified <paramref name="user"/>.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public Task SetNormalizedEmailAsync(TUser user, string normalizedEmail, CancellationToken cancellationToken)
+		public virtual Task SetNormalizedEmailAsync(TUser user, string normalizedEmail, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -589,7 +604,7 @@ namespace AspNet5.Identity.MongoDB
 		/// A <see cref="Task{TResult}"/> that represents the result of the asynchronous query, a <see cref="DateTimeOffset"/> containing the last time
 		/// a user's lockout expired, if any.
 		/// </returns>
-		public Task<DateTimeOffset?> GetLockoutEndDateAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<DateTimeOffset?> GetLockoutEndDateAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -601,7 +616,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="lockoutEnd">The <see cref="DateTimeOffset"/> after which the <paramref name="user"/>'s lockout should end.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task SetLockoutEndDateAsync(TUser user, DateTimeOffset? lockoutEnd, CancellationToken cancellationToken)
+		public virtual Task SetLockoutEndDateAsync(TUser user, DateTimeOffset? lockoutEnd, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -612,7 +627,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user whose cancellation count should be incremented.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the incremented failed access count.</returns>
-		public Task<int> IncrementAccessFailedCountAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<int> IncrementAccessFailedCountAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -624,7 +639,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
 		/// <remarks>This is typically called after the account is successfully accessed.</remarks>
-		public Task ResetAccessFailedCountAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task ResetAccessFailedCountAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -635,7 +650,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user whose failed access count should be retrieved.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the failed access count.</returns>
-		public Task<int> GetAccessFailedCountAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<int> GetAccessFailedCountAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -648,7 +663,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>
 		/// The <see cref="Task"/> that represents the asynchronous operation, true if a user can be locked out, otherwise false.
 		/// </returns>
-		public Task<bool> GetLockoutEnabledAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<bool> GetLockoutEnabledAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -660,7 +675,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="enabled">A flag indicating if lock out can be enabled for the specified <paramref name="user"/>.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task SetLockoutEnabledAsync(TUser user, bool enabled, CancellationToken cancellationToken)
+		public virtual Task SetLockoutEnabledAsync(TUser user, bool enabled, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -676,7 +691,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="phoneNumber">The telephone number to set.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task SetPhoneNumberAsync(TUser user, string phoneNumber, CancellationToken cancellationToken)
+		public virtual Task SetPhoneNumberAsync(TUser user, string phoneNumber, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -687,7 +702,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="user">The user whose telephone number should be retrieved.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the user's telephone number, if any.</returns>
-		public Task<string> GetPhoneNumberAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<string> GetPhoneNumberAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -701,7 +716,7 @@ namespace AspNet5.Identity.MongoDB
 		/// The <see cref="Task"/> that represents the asynchronous operation, returning true if the specified <paramref name="user"/> has a confirmed
 		/// telephone number otherwise false.
 		/// </returns>
-		public Task<bool> GetPhoneNumberConfirmedAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<bool> GetPhoneNumberConfirmedAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -713,7 +728,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="confirmed">A flag indicating whether the user's telephone number has been confirmed.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task SetPhoneNumberConfirmedAsync(TUser user, bool confirmed, CancellationToken cancellationToken)
+		public virtual Task SetPhoneNumberConfirmedAsync(TUser user, bool confirmed, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -726,7 +741,7 @@ namespace AspNet5.Identity.MongoDB
 		/// Returns an <see cref="IQueryable{T}"/> collection of users.
 		/// </summary>
 		/// <value>An <see cref="IQueryable{T}"/> collection of users.</value>
-		public IQueryable<TUser> Users
+		public virtual IQueryable<TUser> Users
 		{
 			get
 			{
@@ -746,7 +761,7 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="enabled">A flag indicating whether the specified <paramref name="user"/> has two factor authentication enabled.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public Task SetTwoFactorEnabledAsync(TUser user, bool enabled, CancellationToken cancellationToken)
+		public virtual Task SetTwoFactorEnabledAsync(TUser user, bool enabled, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -761,7 +776,7 @@ namespace AspNet5.Identity.MongoDB
 		/// The <see cref="Task"/> that represents the asynchronous operation, containing a flag indicating whether the specified 
 		/// <paramref name="user "/>has two factor authentication enabled or not.
 		/// </returns>
-		public Task<bool> GetTwoFactorEnabledAsync(TUser user, CancellationToken cancellationToken)
+		public virtual Task<bool> GetTwoFactorEnabledAsync(TUser user, CancellationToken cancellationToken)
 		{
 			throw new NotImplementedException();
 		}
@@ -773,7 +788,7 @@ namespace AspNet5.Identity.MongoDB
 		private bool _disposed = false; // To detect redundant calls
 
 
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			_disposed = true;
 		}
@@ -782,7 +797,7 @@ namespace AspNet5.Identity.MongoDB
 		/// Throws if disposed.
 		/// </summary>
 		/// <exception cref="System.ObjectDisposedException"></exception>
-		protected void ThrowIfDisposed()
+		protected virtual void ThrowIfDisposed()
 		{
 			if (_disposed)
 			{

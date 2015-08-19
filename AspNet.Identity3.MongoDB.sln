@@ -21,7 +21,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{8A58C419-0
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "AspNet.Identity3.MongoDB", "src\AspNet.Identity3.MongoDB\AspNet.Identity3.MongoDB.xproj", "{B071AA63-BB97-4F57-BC33-D336F98C02D0}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "AspNet.Identity3.MongoDB.InMemory.Tests", "test\AspNet.Identity3.MongoDB.InMemory.Tests\AspNet.Identity3.MongoDB.InMemory.Tests.xproj", "{873D862A-CAAD-4C36-8388-56E70CB16A1E}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "AspNet.Identity3.MongoDB.Tests", "test\AspNet.Identity3.MongoDB.Tests\AspNet.Identity3.MongoDB.Tests.xproj", "{873D862A-CAAD-4C36-8388-56E70CB16A1E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

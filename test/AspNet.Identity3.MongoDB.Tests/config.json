@@ -1,0 +1,6 @@
+﻿{
+	"data": {
+		"connectionString": "mongodb://localhost:27017",
+		"database": "Testing"
+	}
+}

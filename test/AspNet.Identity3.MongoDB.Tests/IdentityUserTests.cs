@@ -1,7 +1,7 @@
 ﻿using Xunit;
 using AspNet5.Identity.MongoDB;
 
-namespace AspNet.Identity3.MongoDB.InMemory.Tests
+namespace AspNet.Identity3.MongoDB.Tests
 {
 	public class IdentityUserTests
 	{
