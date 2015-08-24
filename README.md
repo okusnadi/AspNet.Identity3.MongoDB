@@ -1,6 +1,6 @@
 # AspNet.Identity3.MongoDB
 
-An implementation for MongoDB.Driver (>= v2.0.0) with ASP.NET 5 Identity (>= v3) framework
+An implementation for MongoDB.Driver (>= v2.0.0) with ASP.NET 5 Identity (>= v3) framework at <https://github.com/aspnet/Identity>
 
 
 ## Default details
