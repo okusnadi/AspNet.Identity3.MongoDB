@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using AspNet.Identity3.MongoDB;
 using Microsoft.AspNet.Identity;
 using MongoDB.Driver;
 using Xunit;
@@ -12,28 +11,26 @@ namespace AspNet.Identity3.MongoDB.Tests
 {
 	public class RoleStoreTests : IDisposable
 	{
-		protected DatabaseFixture DatabaseFixture;
-		protected IMongoCollection<IdentityRole> roleCollection;
-		//protected IMongoCollection<IdentityUser> userCollection;
-		protected string CollectionPrefix;
+		private readonly DatabaseFixture _databaseFixture;
+		private readonly IMongoCollection<IdentityRole> _roleCollection;
+		private readonly string _collectionPrefix;
 
-		protected RoleStore<IdentityRole> roleStore;
-		protected IdentityErrorDescriber ErrorDescriber;
+		private readonly RoleStore<IdentityRole> _roleStore;
+		private readonly IdentityErrorDescriber _errorDescriber;
 
 		public RoleStoreTests(string collectionPrefix)
 		{ 
-			DatabaseFixture = new DatabaseFixture(collectionPrefix);
-			roleCollection = DatabaseFixture.GetCollection<IdentityRole>();
-			//userCollection = DatabaseFixture.GetCollection<IdentityUser>();
-			CollectionPrefix = collectionPrefix;
+			_databaseFixture = new DatabaseFixture(collectionPrefix);
+			_roleCollection = _databaseFixture.GetCollection<IdentityRole>();
+			_collectionPrefix = collectionPrefix;
 
-			roleStore = new RoleStore<IdentityRole>(roleCollection);
-			ErrorDescriber = new IdentityErrorDescriber();
+			_roleStore = new RoleStore<IdentityRole>(_roleCollection);
+			_errorDescriber = new IdentityErrorDescriber();
 		}
 
 		public void Dispose()
 		{
-			DatabaseFixture.Dispose();
+			_databaseFixture.Dispose();
 		}
 
 		public class Constructors : RoleStoreTests
@@ -45,18 +42,18 @@ namespace AspNet.Identity3.MongoDB.Tests
 			{
 				// arrange
 				string collectionName = "TestColName";
-				var roleStore = new RoleStoreHelper(DatabaseFixture.ConnectionString, DatabaseFixture.DatabaseName, collectionName);
+				var roleStore = new RoleStoreHelper(_databaseFixture.ConnectionString, _databaseFixture.DatabaseName, collectionName);
 
 				// assert
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.DatabaseName);
 				Assert.Equal(collectionName, roleStore.CollectionName);
 
 				Assert.NotNull(roleStore.MongoClient);
 				Assert.NotNull(roleStore.MongoDatabase);
 				Assert.NotNull(roleStore.MongoCollection);
 
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.MongoDatabase.DatabaseNamespace.DatabaseName);
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.MongoCollection.CollectionNamespace.DatabaseNamespace.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.MongoDatabase.DatabaseNamespace.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.MongoCollection.CollectionNamespace.DatabaseNamespace.DatabaseName);
 				Assert.Equal(collectionName, roleStore.MongoCollection.CollectionNamespace.CollectionName);
 			}
 
@@ -64,7 +61,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 			public void Can_inisialise_from_connectionString_with_default_db_and_collection_names()
 			{
 				// arrange
-				var roleStore = new RoleStoreHelper(DatabaseFixture.ConnectionString);
+				var roleStore = new RoleStoreHelper(_databaseFixture.ConnectionString);
 
 				// assert
 				string defaultDatabaseName = "AspNetIdentity";
@@ -82,18 +79,18 @@ namespace AspNet.Identity3.MongoDB.Tests
 			{
 				// arrange
 				string collectionName = "TestColName";
-				var roleStore = new RoleStoreHelper(DatabaseFixture.GetMongoClient(), DatabaseFixture.DatabaseName, collectionName);
+				var roleStore = new RoleStoreHelper(_databaseFixture.GetMongoClient(), _databaseFixture.DatabaseName, collectionName);
 
 				// assert
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.DatabaseName);
 				Assert.Equal(collectionName, roleStore.CollectionName);
 
 				Assert.NotNull(roleStore.MongoClient);
 				Assert.NotNull(roleStore.MongoDatabase);
 				Assert.NotNull(roleStore.MongoCollection);
 
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.MongoDatabase.DatabaseNamespace.DatabaseName);
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.MongoCollection.CollectionNamespace.DatabaseNamespace.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.MongoDatabase.DatabaseNamespace.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.MongoCollection.CollectionNamespace.DatabaseNamespace.DatabaseName);
 				Assert.Equal(collectionName, roleStore.MongoCollection.CollectionNamespace.CollectionName);
 			}
 
@@ -102,18 +99,18 @@ namespace AspNet.Identity3.MongoDB.Tests
 			{
 				// arrange
 				string collectionName = "TestColName";
-				var roleStore = new RoleStoreHelper(DatabaseFixture.GetMongoDatabase(), collectionName);
+				var roleStore = new RoleStoreHelper(_databaseFixture.GetMongoDatabase(), collectionName);
 
 				// assert
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.DatabaseName);
 				Assert.Equal(collectionName, roleStore.CollectionName);
 
 				Assert.NotNull(roleStore.MongoClient);
 				Assert.NotNull(roleStore.MongoDatabase);
 				Assert.NotNull(roleStore.MongoCollection);
 
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.MongoDatabase.DatabaseNamespace.DatabaseName);
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.MongoCollection.CollectionNamespace.DatabaseNamespace.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.MongoDatabase.DatabaseNamespace.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.MongoCollection.CollectionNamespace.DatabaseNamespace.DatabaseName);
 				Assert.Equal(collectionName, roleStore.MongoCollection.CollectionNamespace.CollectionName);
 			}
 
@@ -121,19 +118,19 @@ namespace AspNet.Identity3.MongoDB.Tests
 			public void Can_inisialise_from_MongoCollection()
 			{
 				// arrange
-				string collectionName = roleCollection.CollectionNamespace.CollectionName;
-				var roleStore = new RoleStoreHelper(roleCollection);
+				string collectionName = _roleCollection.CollectionNamespace.CollectionName;
+				var roleStore = new RoleStoreHelper(_roleCollection);
 
 				// assert
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.DatabaseName);
 				Assert.Equal(collectionName, roleStore.CollectionName);
 
 				Assert.NotNull(roleStore.MongoClient);
 				Assert.NotNull(roleStore.MongoDatabase);
 				Assert.NotNull(roleStore.MongoCollection);
 
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.MongoDatabase.DatabaseNamespace.DatabaseName);
-				Assert.Equal(DatabaseFixture.DatabaseName, roleStore.MongoCollection.CollectionNamespace.DatabaseNamespace.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.MongoDatabase.DatabaseNamespace.DatabaseName);
+				Assert.Equal(_databaseFixture.DatabaseName, roleStore.MongoCollection.CollectionNamespace.DatabaseNamespace.DatabaseName);
 				Assert.Equal(collectionName, roleStore.MongoCollection.CollectionNamespace.CollectionName);
 			}
 
@@ -154,12 +151,12 @@ namespace AspNet.Identity3.MongoDB.Tests
 				role.Claims.Add(claim2);
 
 				// act
-				var result = await roleStore.CreateAsync(role);
+				var result = await _roleStore.CreateAsync(role);
 
 				// assert
 				IdentityResultAssert.IsSuccess(result);
 
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				IdentityRoleAssert.Equal(role, roleFromDb);
 			}
 
@@ -171,15 +168,15 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role = new IdentityRole("Creating_same_role_twice_returns_DuplicateRoleName_error");
 
 				// act
-				var result1 = await roleStore.CreateAsync(role);
+				var result1 = await _roleStore.CreateAsync(role);
 
 				role.Name = "a different name, but same Id";
-				var result2 = await roleStore.CreateAsync(role);
+				var result2 = await _roleStore.CreateAsync(role);
 
 				// assert
 				IdentityResultAssert.IsSuccess(result1);
 
-				var expectedError = IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.ToString()));
+				var expectedError = IdentityResult.Failed(_errorDescriber.DuplicateRoleName(role.ToString()));
 				IdentityResultAssert.IsFailure(result2, expectedError.Errors.FirstOrDefault());
 			}
 
@@ -191,13 +188,13 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role2 = new IdentityRole(role1.Name);
 
 				// act
-				var result1 = await roleStore.CreateAsync(role1);
-				var result2 = await roleStore.CreateAsync(role2);
+				var result1 = await _roleStore.CreateAsync(role1);
+				var result2 = await _roleStore.CreateAsync(role2);
 
 				// assert
 				IdentityResultAssert.IsSuccess(result1);
 
-				var expectedError = IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role2.ToString()));
+				var expectedError = IdentityResult.Failed(_errorDescriber.DuplicateRoleName(role2.ToString()));
 				IdentityResultAssert.IsFailure(result2, expectedError.Errors.FirstOrDefault());
 			}
 		}
@@ -216,18 +213,18 @@ namespace AspNet.Identity3.MongoDB.Tests
 				role.Claims.Add(claim1);
 
 				// initial role creation
-				await roleStore.CreateAsync(role);
+				await _roleStore.CreateAsync(role);
 				role.Name = role.Name + " different";
 				role.Claims.Add(claim2);
 
 
 				// act
-				var result = await roleStore.UpdateAsync(role);
+				var result = await _roleStore.UpdateAsync(role);
 
 				// assert
 				IdentityResultAssert.IsSuccess(result);
 
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				IdentityRoleAssert.Equal(role, roleFromDb);
 			}
 
@@ -240,12 +237,12 @@ namespace AspNet.Identity3.MongoDB.Tests
 
 
 				// act
-				var result = await roleStore.UpdateAsync(role);
+				var result = await _roleStore.UpdateAsync(role);
 
 				// assert
 				IdentityResultAssert.IsSuccess(result);
 
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				IdentityRoleAssert.Equal(role, roleFromDb);
 			}
 
@@ -255,20 +252,20 @@ namespace AspNet.Identity3.MongoDB.Tests
 			{
 				// arrange
 				var role = new IdentityRole("Can_update_role_multiple_times");
-				await roleStore.CreateAsync(role);
+				await _roleStore.CreateAsync(role);
 
 				// act
 				role.Claims.Add(new IdentityClaim { ClaimType = "ClaimType1", ClaimValue = "claim value" });
-				var result1 = await roleStore.UpdateAsync(role);
+				var result1 = await _roleStore.UpdateAsync(role);
 
 				role.Name = role.Name + " different";
-				var result2 = await roleStore.UpdateAsync(role);
+				var result2 = await _roleStore.UpdateAsync(role);
 
 				// assert
 				IdentityResultAssert.IsSuccess(result1);
 				IdentityResultAssert.IsSuccess(result2);
 
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				IdentityRoleAssert.Equal(role, roleFromDb);
 			}
 
@@ -279,15 +276,15 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role1 = new IdentityRole("Updating_role_name_to_existing_name_returns_DuplicateRoleName_error");
 				var role2 = new IdentityRole("Updating_role_name_to_existing_name_returns_DuplicateRoleName_error different");
 
-				await roleStore.CreateAsync(role1);
-				await roleStore.CreateAsync(role2);
+				await _roleStore.CreateAsync(role1);
+				await _roleStore.CreateAsync(role2);
 
 				// act
 				role2.Name = role1.Name;
-				var result3= await roleStore.UpdateAsync(role2);
+				var result3= await _roleStore.UpdateAsync(role2);
 
 				// assert
-				var expectedError = IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role2.ToString()));
+				var expectedError = IdentityResult.Failed(_errorDescriber.DuplicateRoleName(role2.ToString()));
 				IdentityResultAssert.IsFailure(result3,expectedError.Errors.FirstOrDefault());
 			}
 		}
@@ -301,17 +298,17 @@ namespace AspNet.Identity3.MongoDB.Tests
 			{
 				// arrange
 				var role = new IdentityRole("Delete_role_returns_Success");
-				await roleStore.CreateAsync(role);
+				await _roleStore.CreateAsync(role);
 				
 
 				// act
-				var result = await roleStore.DeleteAsync(role);
+				var result = await _roleStore.DeleteAsync(role);
 
 
 				// assert
 				IdentityResultAssert.IsSuccess(result);
 
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				Assert.Null(roleFromDb);
 			}
 
@@ -324,13 +321,13 @@ namespace AspNet.Identity3.MongoDB.Tests
 
 
 				// act
-				var result = await roleStore.DeleteAsync(role);
+				var result = await _roleStore.DeleteAsync(role);
 
 
 				// assert
 				IdentityResultAssert.IsSuccess(result);
 
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				Assert.Null(roleFromDb);
 			}
 		}
@@ -346,7 +343,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var roleId = "unknown roleId";
 
 				// act
-				var result = await roleStore.FindByIdAsync(roleId);
+				var result = await _roleStore.FindByIdAsync(roleId);
 
 				// assert
 				Assert.Null(result);
@@ -357,10 +354,10 @@ namespace AspNet.Identity3.MongoDB.Tests
 			{
 				// arrange
 				var role = new IdentityRole("Known_roleId_returns_IdentityRole");
-				await roleStore.CreateAsync(role);
+				await _roleStore.CreateAsync(role);
 
 				// act
-				var result = await roleStore.FindByIdAsync(role.Id);
+				var result = await _roleStore.FindByIdAsync(role.Id);
 
 				// assert
 				IdentityRoleAssert.Equal(role, result);
@@ -378,7 +375,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var name = "unknown normalised name";
 
 				// act
-				var result = await roleStore.FindByNameAsync(name);
+				var result = await _roleStore.FindByNameAsync(name);
 
 				// assert
 				Assert.Null(result);
@@ -390,10 +387,10 @@ namespace AspNet.Identity3.MongoDB.Tests
 				// arrange
 				var role = new IdentityRole("Known_normalizedRoleName_returns_IdentityRole");
 				role.NormalizedName = role.Name;
-				await roleStore.CreateAsync(role);
+				await _roleStore.CreateAsync(role);
 
 				// act
-				var result = await roleStore.FindByNameAsync(role.NormalizedName);
+				var result = await _roleStore.FindByNameAsync(role.NormalizedName);
 
 				// assert
 				IdentityRoleAssert.Equal(role, result);
@@ -411,10 +408,10 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var claim = new Claim("ClaimType", "some value");
 
 				var role = new IdentityRole("Adding_new_claim_to_role_updates_database_role_record");
-				await roleStore.CreateAsync(role);
+				await _roleStore.CreateAsync(role);
 				
 				// act
-				await roleStore.AddClaimAsync(role, claim);
+				await _roleStore.AddClaimAsync(role, claim);
 
 				// assert
 
@@ -423,7 +420,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				IdentityClaimAssert.Equal(new List<IdentityClaim> {identityClaim}, role.Claims);
 
 				// check role claims from DB
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim }, roleFromDb.Claims);
 			}
 
@@ -436,10 +433,10 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role = new IdentityRole("Adding_existing_claim_to_role_does_not_update_database_role_record");
 				var identityClaim = new IdentityClaim { ClaimType = claim.Type, ClaimValue = claim.Value };
 				role.Claims.Add(identityClaim);
-				await roleStore.CreateAsync(role);
+				await _roleStore.CreateAsync(role);
 
 				// act
-				await roleStore.AddClaimAsync(role, claim);
+				await _roleStore.AddClaimAsync(role, claim);
 
 				// assert
 
@@ -447,7 +444,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim }, role.Claims);
 
 				// check role claims from DB
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim }, roleFromDb.Claims);
 			}
 
@@ -459,11 +456,11 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var claim2 = new Claim(claim1.Type, "some other value");
 
 				var role = new IdentityRole("Adding_multiple_claims_with_same_ClaimType_adds_multiple_claims_to_database");
-				await roleStore.CreateAsync(role);
+				await _roleStore.CreateAsync(role);
 
 				// act
-				await roleStore.AddClaimAsync(role, claim1);
-				await roleStore.AddClaimAsync(role, claim2);
+				await _roleStore.AddClaimAsync(role, claim1);
+				await _roleStore.AddClaimAsync(role, claim2);
 
 				// assert
 				var identityClaim1 = new IdentityClaim { ClaimType = claim1.Type, ClaimValue = claim1.Value };
@@ -473,7 +470,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim1, identityClaim2 }, role.Claims);
 
 				// check role claims from DB
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim1, identityClaim2 }, roleFromDb.Claims);
 			}
 		}
@@ -490,11 +487,11 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role = new IdentityRole("Removing_unkown_claim_does_not_change_database_role_record");
 				role.Claims.Add(identityClaim);
 
-				await roleStore.CreateAsync(role);
+				await _roleStore.CreateAsync(role);
 
 				// act
 				var claim = new Claim("other type", "some other value");
-				await roleStore.RemoveClaimAsync(role, claim);
+				await _roleStore.RemoveClaimAsync(role, claim);
 
 				// assert
 
@@ -502,7 +499,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim }, role.Claims);
 
 				// check role claims from DB
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim }, roleFromDb.Claims);
 			}
 
@@ -518,10 +515,10 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role = new IdentityRole("Remove_existing_claim_updates_database_role_record");
 				role.Claims.Add(identityClaim1);
 				role.Claims.Add(identityClaim2);
-				await roleStore.CreateAsync(role);
+				await _roleStore.CreateAsync(role);
 
 				// act
-				await roleStore.RemoveClaimAsync(role, claim1);
+				await _roleStore.RemoveClaimAsync(role, claim1);
 
 				// assert
 
@@ -529,7 +526,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim2 }, role.Claims);
 
 				// check role claims from DB
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim2 }, roleFromDb.Claims);
 			}
 
@@ -545,10 +542,10 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role = new IdentityRole("Role_has_multiple_claims_with_same_ClaimType_removing_only_removes_cliam_with_same_value");
 				role.Claims.Add(identityClaim1);
 				role.Claims.Add(identityClaim2);
-				await roleStore.CreateAsync(role);
+				await _roleStore.CreateAsync(role);
 
 				// act
-				await roleStore.RemoveClaimAsync(role, claim1);
+				await _roleStore.RemoveClaimAsync(role, claim1);
 
 				// assert
 
@@ -556,7 +553,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim2 }, role.Claims);
 
 				// check role claims from DB
-				var roleFromDb = await roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim2 }, roleFromDb.Claims);
 			}
 		}
@@ -576,11 +573,11 @@ namespace AspNet.Identity3.MongoDB.Tests
 
 			#region helper methods to get protected fields
 
-			public string DatabaseName { get { return base._databaseName; } }
-			public string CollectionName { get { return base._collectionName; } }
-			public IMongoClient MongoClient { get { return base._client; } }
-			public IMongoDatabase MongoDatabase { get { return base._database; } }
-			public IMongoCollection<IdentityRole> MongoCollection { get { return base._collection; } }
+			public string DatabaseName => base._databaseName;
+			public string CollectionName => base._collectionName;
+			public IMongoClient MongoClient => base._client;
+			public IMongoDatabase MongoDatabase => base._database;
+			public IMongoCollection<IdentityRole> MongoCollection => base._collection;
 
 			#endregion
 		}

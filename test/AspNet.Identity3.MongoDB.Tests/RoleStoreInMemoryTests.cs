@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using AspNet.Identity3.MongoDB;
 using MongoDB.Driver;
 using Xunit;
 
@@ -9,32 +8,15 @@ namespace AspNet.Identity3.MongoDB.Tests
 {
 	public class RoleStoreInMemoryTests
 	{
-		protected RoleStore<IdentityRole> RoleStore;
+		private readonly RoleStore<IdentityRole> _roleStore;
 
 		public RoleStoreInMemoryTests()
 		{
-			RoleStore = new RoleStore<IdentityRole>("mongodb://localhost:27017");
+			_roleStore = new RoleStore<IdentityRole>("mongodb://localhost:27017");
 		}
 
-		public class GeneralChecks : RoleStoreInMemoryTests
+		public class Misc : RoleStoreInMemoryTests
 		{
-			[Fact]
-			public async Task Methods_throw_ObjectDisposedException_when_disposed()
-			{
-				RoleStore.Dispose();
-				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await RoleStore.FindByIdAsync(null));
-				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await RoleStore.FindByNameAsync(null));
-				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await RoleStore.GetRoleIdAsync(null));
-				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await RoleStore.GetRoleNameAsync(null));
-				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await RoleStore.SetRoleNameAsync(null, null));
-				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await RoleStore.CreateAsync(null));
-				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await RoleStore.UpdateAsync(null));
-				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await RoleStore.DeleteAsync(null));
-				
-				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await RoleStore.GetClaimsAsync(null));
-				
-			}
-
 			[Fact]
 			public void Constructors_throw_ArgumentNullException_with_null()
 			{
@@ -48,16 +30,33 @@ namespace AspNet.Identity3.MongoDB.Tests
 			}
 
 			[Fact]
+			public async Task Methods_throw_ObjectDisposedException_when_disposed()
+			{
+				_roleStore.Dispose();
+				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await _roleStore.FindByIdAsync(null));
+				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await _roleStore.FindByNameAsync(null));
+				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await _roleStore.GetRoleIdAsync(null));
+				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await _roleStore.GetRoleNameAsync(null));
+				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await _roleStore.SetRoleNameAsync(null, null));
+				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await _roleStore.CreateAsync(null));
+				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await _roleStore.UpdateAsync(null));
+				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await _roleStore.DeleteAsync(null));
+				
+				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await _roleStore.GetClaimsAsync(null));
+				
+			}
+
+			[Fact]
 			public async Task Methods_throw_ArgumentNullException_when_null_arguments()
 			{
-				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await RoleStore.GetRoleIdAsync(null));
-				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await RoleStore.GetRoleNameAsync(null));
-				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await RoleStore.SetRoleNameAsync(null, null));
-				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await RoleStore.CreateAsync(null));
-				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await RoleStore.UpdateAsync(null));
-				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await RoleStore.DeleteAsync(null));
+				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await _roleStore.GetRoleIdAsync(null));
+				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await _roleStore.GetRoleNameAsync(null));
+				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await _roleStore.SetRoleNameAsync(null, null));
+				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await _roleStore.CreateAsync(null));
+				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await _roleStore.UpdateAsync(null));
+				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await _roleStore.DeleteAsync(null));
 
-				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await RoleStore.GetClaimsAsync(null));
+				await Assert.ThrowsAsync<ArgumentNullException>("role", async () => await _roleStore.GetClaimsAsync(null));
 			}
 		}
 
@@ -70,7 +69,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role = new IdentityRole("Returns_Id_from_Role_as_string");
 
 				// act
-				var result = await RoleStore.GetRoleIdAsync(role);
+				var result = await _roleStore.GetRoleIdAsync(role);
 
 				// assert
 				Assert.Equal(role.Id, result);
@@ -84,7 +83,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				role.Id = null;
 
 				// act
-				var result = await RoleStore.GetRoleIdAsync(role);
+				var result = await _roleStore.GetRoleIdAsync(role);
 
 				// assert
 				Assert.Null(result);
@@ -103,7 +102,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role = new IdentityRole(roleName);
 
 				// act
-				var result = await RoleStore.GetRoleNameAsync(role);
+				var result = await _roleStore.GetRoleNameAsync(role);
 
 				// assert
 				Assert.Equal(role.Name, result);
@@ -124,7 +123,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				role.NormalizedName = roleName;
 
 				// act
-				var result = await RoleStore.GetNormalizedRoleNameAsync(role);
+				var result = await _roleStore.GetNormalizedRoleNameAsync(role);
 
 				// assert
 				Assert.Equal(role.Name, result);
@@ -140,7 +139,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 			public async Task Find_with_blank_roleId_returns_null(string roleId)
 			{
 				// act
-				var result = await RoleStore.FindByIdAsync(roleId);
+				var result = await _roleStore.FindByIdAsync(roleId);
 
 				// assert
 				Assert.Null(result);
@@ -155,7 +154,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 			public async Task Find_with_blank_normalisedName_returns_null(string normalisedName)
 			{
 				// act
-				var result = await RoleStore.FindByNameAsync(normalisedName);
+				var result = await _roleStore.FindByNameAsync(normalisedName);
 
 				// assert
 				Assert.Null(result);
@@ -174,7 +173,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role = new IdentityRole();
 
 				// act
-				await RoleStore.SetRoleNameAsync(role, roleName);
+				await _roleStore.SetRoleNameAsync(role, roleName);
 
 				// assert
 				Assert.Equal(roleName, role.Name);
@@ -193,7 +192,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role = new IdentityRole("Sets_role_normalisedName_to_supplied_value");
 
 				// act
-				await RoleStore.SetNormalizedRoleNameAsync(role, normalisedName);
+				await _roleStore.SetNormalizedRoleNameAsync(role, normalisedName);
 
 				// assert
 				Assert.Equal(normalisedName, role.NormalizedName);
@@ -209,7 +208,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				var role = new IdentityRole();
 
 				// act
-				var result = await RoleStore.GetClaimsAsync(role);
+				var result = await _roleStore.GetClaimsAsync(role);
 
 				// assert
 				Assert.Empty(result);
@@ -227,7 +226,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 
 
 				// act
-				var result = await RoleStore.GetClaimsAsync(role);
+				var result = await _roleStore.GetClaimsAsync(role);
 
 				// assert
 				Assert.Equal(role.Claims.Count, result.Count);

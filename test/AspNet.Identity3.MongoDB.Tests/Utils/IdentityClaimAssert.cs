@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using AspNet.Identity3.MongoDB;
 using Xunit;
 
 namespace AspNet.Identity3.MongoDB.Tests
@@ -15,10 +14,10 @@ namespace AspNet.Identity3.MongoDB.Tests
 			Assert.Equal(expected.ClaimValue, actual.ClaimValue);
 		}
 
-		public static void Equal(IList<IdentityClaim> expected, IList<IdentityClaim> actual)
+		public static void Equal(IEnumerable<IdentityClaim> expected, IEnumerable<IdentityClaim> actual)
 		{
 			Assert.True((expected == null && actual == null) || (expected != null && actual != null));
-			Assert.Equal(expected.Count, actual.Count);
+			Assert.Equal(expected.Count(), actual.Count());
 
 			foreach(var e in expected)
 			{

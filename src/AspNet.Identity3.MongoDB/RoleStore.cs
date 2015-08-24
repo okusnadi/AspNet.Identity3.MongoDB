@@ -299,32 +299,7 @@ namespace AspNet.Identity3.MongoDB
 		}
 
 		#endregion
-
-		#region IQueryableRoleStore<TRole>
-
-		/// <summary>
-		/// WARNING: awaiting the mongoDB csharp driver to implement AsQueryable https://jira.mongodb.org/browse/CSHARP-935. In the mean time using ToList of the repos (http://stackoverflow.com/questions/29124995/is-asqueryable-method-departed-in-new-mongodb-c-sharp-driver-2-0rc).
-		/// Returns an <see cref="IQueryable{T}"/> collection of roles.
-		/// </summary>
-		/// <value>An <see cref="IQueryable{T}"/> collection of roles.</value>
-		public virtual IQueryable<TRole> Roles
-		{
-			get
-			{
-				// TODO: This is really rubbish
-				//		awaiting the mongoDB csharp driver to implement AsQueryable
-				//		https://jira.mongodb.org/browse/CSHARP-935
-				//		Temporary list solution from http://stackoverflow.com/questions/29124995/is-asqueryable-method-departed-in-new-mongodb-c-sharp-driver-2-0rc
-				ThrowIfDisposed();
-				var filter = Builders<TRole>.Filter.Ne(x => x.Id, default(TKey));
-				var list = _collection.Find(filter).ToListAsync().Result;
-
-				return list.AsQueryable();
-			}
-		}
-
-		#endregion
-
+		
 		#region IRoleClaimStore<TRole>
 
 		/// <summary>
@@ -337,6 +312,7 @@ namespace AspNet.Identity3.MongoDB
 		/// </returns>
 		public virtual Task<IList<Claim>> GetClaimsAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			ThrowIfDisposed();
 			if (role == null) throw new ArgumentNullException(nameof(role));
 
@@ -403,6 +379,31 @@ namespace AspNet.Identity3.MongoDB
 
 		#endregion
 
+		#region IQueryableRoleStore<TRole>
+
+		/// <summary>
+		/// WARNING: awaiting the mongoDB csharp driver to implement AsQueryable https://jira.mongodb.org/browse/CSHARP-935. In the mean time using ToList of the repos (http://stackoverflow.com/questions/29124995/is-asqueryable-method-departed-in-new-mongodb-c-sharp-driver-2-0rc).
+		/// Returns an <see cref="IQueryable{T}"/> collection of roles.
+		/// </summary>
+		/// <value>An <see cref="IQueryable{T}"/> collection of roles.</value>
+		public virtual IQueryable<TRole> Roles
+		{
+			get
+			{
+				// TODO: This is really rubbish
+				//		awaiting the mongoDB csharp driver to implement AsQueryable
+				//		https://jira.mongodb.org/browse/CSHARP-935
+				//		Temporary list solution from http://stackoverflow.com/questions/29124995/is-asqueryable-method-departed-in-new-mongodb-c-sharp-driver-2-0rc
+				ThrowIfDisposed();
+				var filter = Builders<TRole>.Filter.Ne(x => x.Id, default(TKey));
+				var list = _collection.Find(filter).ToListAsync().Result;
+
+				return list.AsQueryable();
+			}
+		}
+
+		#endregion
+
 		#region IDisposable
 
 		private bool _disposed = false; // To detect redundant calls
@@ -444,7 +445,7 @@ namespace AspNet.Identity3.MongoDB
 			var fBuilder = Builders<TRole>.Filter;
 			var filter = fBuilder.Ne(x => x.Id, role.Id) & fBuilder.Eq(x => x.Name, role.Name);
 
-			var result = await _collection.Find(filter).FirstOrDefaultAsync();
+			var result = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
 			return result != null;
 		}
 

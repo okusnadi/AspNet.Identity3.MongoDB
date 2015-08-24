@@ -1,5 +1,4 @@
-﻿
-namespace AspNet.Identity3.MongoDB
+﻿namespace AspNet.Identity3.MongoDB
 {
 	/// <summary>
 	/// Entity type for a user's login (i.e. facebook, google)

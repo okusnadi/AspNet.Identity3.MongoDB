@@ -49,7 +49,7 @@ namespace AspNet.Identity3.MongoDB
 		public virtual string PasswordHash { get; set; }
 
 		/// <summary>
-		/// A random value that should change whenever a users credentials change (password changed, login removed)
+		/// A random value that should change whenever a user's credentials change (ie, password changed, login removed)
 		/// </summary>
 		public virtual string SecurityStamp { get; set; }
 
