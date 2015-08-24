@@ -1,5 +1,4 @@
 ﻿using System;
-using AspNet5.Identity.MongoDB;
 using MongoDB.Bson.Serialization.Conventions;
 
 namespace AspNet.Identity3.MongoDB

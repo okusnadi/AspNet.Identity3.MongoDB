@@ -1,4 +1,4 @@
-﻿using AspNet5.Identity.MongoDB;
+﻿using AspNet.Identity3.MongoDB;
 using Xunit;
 
 namespace AspNet.Identity3.MongoDB.Tests

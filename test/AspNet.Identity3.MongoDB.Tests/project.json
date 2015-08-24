@@ -15,11 +15,7 @@
 	},
 
 	"frameworks": {
-		"dnx451": {
-			"dependencies": {
-				"AutoMoq": "1.6.2.0"
-			}
-		}
+		"dnx451": { }
 	},
 
 	"commands": {

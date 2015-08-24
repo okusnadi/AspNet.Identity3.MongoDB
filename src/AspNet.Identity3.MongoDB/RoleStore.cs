@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
-using AspNet.Identity3.MongoDB;
 using Microsoft.AspNet.Identity;
 using MongoDB.Driver;
 
-namespace AspNet5.Identity.MongoDB
+namespace AspNet.Identity3.MongoDB
 {
 	public class RoleStore<TRole> : 
 		RoleStore<TRole, string>
@@ -43,7 +43,7 @@ namespace AspNet5.Identity.MongoDB
 
 		public RoleStore(string connectionString, string databaseName = null, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null)
 		{
-			if(string.IsNullOrWhiteSpace(connectionString)) throw new ArgumentNullException("connectionString");
+			if (string.IsNullOrWhiteSpace(connectionString)) throw new ArgumentNullException(nameof(connectionString));
 
 			SetProperties(databaseName, collectionName, describer);
 			SetDbConnection(connectionString, collectionSettings);
@@ -51,7 +51,7 @@ namespace AspNet5.Identity.MongoDB
 
 		public RoleStore(IMongoClient client, string databaseName = null, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null)
 		{
-			if(client == null) throw new ArgumentNullException("client");
+			if (client == null) throw new ArgumentNullException(nameof(client));
 
 			SetProperties(databaseName, collectionName, describer);
 			SetDbConnection(client, collectionSettings);
@@ -59,7 +59,7 @@ namespace AspNet5.Identity.MongoDB
 
 		public RoleStore(IMongoDatabase database, string collectionName = null, MongoCollectionSettings collectionSettings = null, IdentityErrorDescriber describer = null)
 		{
-			if(database == null) throw new ArgumentNullException("database");
+			if (database == null) throw new ArgumentNullException(nameof(database));
 
 			SetProperties(database.DatabaseNamespace.DatabaseName, collectionName, describer);
 			SetDbConnection(database, collectionSettings);
@@ -67,7 +67,7 @@ namespace AspNet5.Identity.MongoDB
 
 		public RoleStore(IMongoCollection<TRole> collection, IdentityErrorDescriber describer = null)
 		{
-			if(collection == null) throw new ArgumentNullException("collection");
+			if (collection == null) throw new ArgumentNullException(nameof(collection));
 
 			_collection = collection;
 			_database = collection.Database;
@@ -132,7 +132,7 @@ namespace AspNet5.Identity.MongoDB
 		public virtual async Task<IdentityResult> CreateAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
-			if(role == null) throw new ArgumentNullException("role");
+			if (role == null) throw new ArgumentNullException(nameof(role));
 			if (await RoleDetailsAlreadyExists(role, cancellationToken)) return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.ToString()));
 
 			try
@@ -156,19 +156,12 @@ namespace AspNet5.Identity.MongoDB
 		public virtual async Task<IdentityResult> UpdateAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
-			if(role == null) throw new ArgumentNullException("role");
-			if(await RoleDetailsAlreadyExists(role, cancellationToken)) return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.ToString()));
-
-
-			try
-			{
-				var filter = Builders<TRole>.Filter.Eq(x => x.Id, role.Id);
-				await _collection.ReplaceOneAsync(filter, role, null, cancellationToken);
-			}
-			catch(MongoWriteException)
-			{
-				return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.ToString()));
-			}
+			if (role == null) throw new ArgumentNullException(nameof(role));
+			if (await RoleDetailsAlreadyExists(role, cancellationToken)) return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.ToString()));
+			
+			var filter = Builders<TRole>.Filter.Eq(x => x.Id, role.Id);
+			var updateOptions = new UpdateOptions { IsUpsert = true};
+			await _collection.ReplaceOneAsync(filter, role, updateOptions, cancellationToken);
 
 			return IdentityResult.Success;
 		}
@@ -179,9 +172,15 @@ namespace AspNet5.Identity.MongoDB
 		/// <param name="role">The role to delete from the store.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>A <see cref="Task{TResult}"/> that represents the <see cref="IdentityResult"/> of the asynchronous query.</returns>
-		public virtual Task<IdentityResult> DeleteAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
+		public virtual async Task<IdentityResult> DeleteAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			ThrowIfDisposed();
+			if (role == null) throw new ArgumentNullException(nameof(role));
+
+			var filter = Builders<TRole>.Filter.Eq(x => x.Id, role.Id);
+			await _collection.DeleteOneAsync(filter, cancellationToken);
+
+			return IdentityResult.Success;
 		}
 
 		/// <summary>
@@ -192,7 +191,11 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>A <see cref="Task{TResult}"/> that contains the ID of the role.</returns>
 		public virtual Task<string> GetRoleIdAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			cancellationToken.ThrowIfCancellationRequested();
+			ThrowIfDisposed();
+			if (role == null) throw new ArgumentNullException(nameof(role));
+			
+			return Task.FromResult(ConvertIdToString(role.Id));
 		}
 
 		/// <summary>
@@ -203,7 +206,11 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>A <see cref="Task{TResult}"/> that contains the name of the role.</returns>
 		public virtual Task<string> GetRoleNameAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			cancellationToken.ThrowIfCancellationRequested();
+			ThrowIfDisposed();
+			if (role == null) throw new ArgumentNullException(nameof(role));
+			
+			return Task.FromResult(role.Name);
 		}
 
 		/// <summary>
@@ -214,7 +221,11 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>A <see cref="Task{TResult}"/> that contains the name of the role.</returns>
 		public virtual Task<string> GetNormalizedRoleNameAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			cancellationToken.ThrowIfCancellationRequested();
+			ThrowIfDisposed();
+			if (role == null) throw new ArgumentNullException(nameof(role));
+
+			return Task.FromResult(role.NormalizedName);
 		}
 
 		/// <summary>
@@ -225,7 +236,14 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>A <see cref="Task{TResult}"/> that result of the look up.</returns>
 		public virtual Task<TRole> FindByIdAsync(string roleId, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			ThrowIfDisposed();
+			TKey id = ConvertIdFromString(roleId);
+			if (id == null) return Task.FromResult((TRole)null);
+
+			var filter = Builders<TRole>.Filter.Eq(x => x.Id, id);
+			var options = new FindOptions { AllowPartialResults = false };
+
+			return _collection.Find(filter, options).SingleOrDefaultAsync(cancellationToken);
 		}
 
 		/// <summary>
@@ -236,7 +254,14 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>A <see cref="Task{TResult}"/> that result of the look up.</returns>
 		public virtual Task<TRole> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			ThrowIfDisposed();
+
+			if (string.IsNullOrWhiteSpace(normalizedRoleName)) return Task.FromResult((TRole)null);
+
+			var filter = Builders<TRole>.Filter.Eq(x => x.NormalizedName, normalizedRoleName);
+			var options = new FindOptions { AllowPartialResults = false };
+
+			return _collection.Find(filter, options).SingleOrDefaultAsync(cancellationToken);
 		}
 
 		/// <summary>
@@ -248,7 +273,12 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
 		public virtual Task SetRoleNameAsync(TRole role, string roleName, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			cancellationToken.ThrowIfCancellationRequested();
+			ThrowIfDisposed();
+			if (role == null) throw new ArgumentNullException(nameof(role));
+
+			role.Name = roleName;
+			return Task.FromResult(0);
 		}
 
 		/// <summary>
@@ -260,7 +290,12 @@ namespace AspNet5.Identity.MongoDB
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
 		public virtual Task SetNormalizedRoleNameAsync(TRole role, string normalizedName, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			cancellationToken.ThrowIfCancellationRequested();
+			ThrowIfDisposed();
+			if (role == null) throw new ArgumentNullException(nameof(role));
+
+			role.NormalizedName = normalizedName;
+			return Task.FromResult(0);
 		}
 
 		#endregion
@@ -268,6 +303,7 @@ namespace AspNet5.Identity.MongoDB
 		#region IQueryableRoleStore<TRole>
 
 		/// <summary>
+		/// WARNING: awaiting the mongoDB csharp driver to implement AsQueryable https://jira.mongodb.org/browse/CSHARP-935. In the mean time using ToList of the repos (http://stackoverflow.com/questions/29124995/is-asqueryable-method-departed-in-new-mongodb-c-sharp-driver-2-0rc).
 		/// Returns an <see cref="IQueryable{T}"/> collection of roles.
 		/// </summary>
 		/// <value>An <see cref="IQueryable{T}"/> collection of roles.</value>
@@ -275,7 +311,15 @@ namespace AspNet5.Identity.MongoDB
 		{
 			get
 			{
-				throw new NotImplementedException();
+				// TODO: This is really rubbish
+				//		awaiting the mongoDB csharp driver to implement AsQueryable
+				//		https://jira.mongodb.org/browse/CSHARP-935
+				//		Temporary list solution from http://stackoverflow.com/questions/29124995/is-asqueryable-method-departed-in-new-mongodb-c-sharp-driver-2-0rc
+				ThrowIfDisposed();
+				var filter = Builders<TRole>.Filter.Ne(x => x.Id, default(TKey));
+				var list = _collection.Find(filter).ToListAsync().Result;
+
+				return list.AsQueryable();
 			}
 		}
 
@@ -294,7 +338,7 @@ namespace AspNet5.Identity.MongoDB
 		public virtual Task<IList<Claim>> GetClaimsAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
-			if (role == null) throw new ArgumentNullException("role");
+			if (role == null) throw new ArgumentNullException(nameof(role));
 
 			IList<Claim> result = role.Claims.Select(c => new Claim(c.ClaimType, c.ClaimValue)).ToList();
 			return Task.FromResult(result);
@@ -310,29 +354,20 @@ namespace AspNet5.Identity.MongoDB
 		public virtual Task AddClaimAsync(TRole role, Claim claim, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
-			if (role == null) throw new ArgumentNullException("role");
-			if (claim == null) throw new ArgumentNullException("claim");
+			if (role == null) throw new ArgumentNullException(nameof(role));
+			if (claim == null) throw new ArgumentNullException(nameof(claim));
+
+			// claim and value already exist - just return
+			if (role.Claims.Any(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value)) return Task.FromResult(0);
 			
 			// new claim for the role
-			if (!role.Claims.Any(x => x.ClaimType == claim.Type))
+			role.Claims.Add(new IdentityClaim
 			{
-				role.Claims.Add(new IdentityClaim
-				{
-					ClaimType = claim.Type,
-					ClaimValue = claim.Value
-				});
-				// update role claims in the database
-				DoClaimUpdate(role.Id, role.Claims, cancellationToken);
-			}
-			// new value for existing claim on the role
-			else if (role.Claims.Any(x => x.ClaimType == claim.Type && x.ClaimValue != claim.Value))
-			{
-				var c = role.Claims.Single(x => x.ClaimType == claim.Type);
-				c.ClaimValue = claim.Value;
-
-				// update role claims in the database
-				DoClaimUpdate(role.Id, role.Claims, cancellationToken);
-			}
+				ClaimType = claim.Type,
+				ClaimValue = claim.Value
+			});
+			// update role claims in the database
+			DoClaimUpdate(role.Id, role.Claims, cancellationToken);
 
 			return Task.FromResult(0);
 		}
@@ -347,18 +382,18 @@ namespace AspNet5.Identity.MongoDB
 		public virtual async Task RemoveClaimAsync(TRole role, Claim claim, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
-			if (role == null) throw new ArgumentNullException("role");
-			if (claim == null) throw new ArgumentNullException("claim");
+			if (role == null) throw new ArgumentNullException(nameof(role));
+			if (claim == null) throw new ArgumentNullException(nameof(claim));
 
-			if (role.Claims.Any(x => x.ClaimType == claim.Type))
+			if (role.Claims.Any(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value))
 			{
-				var c = role.Claims.Single(x => x.ClaimType == claim.Type);
+				var c = role.Claims.Single(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value);
 				role.Claims.Remove(c);
 				await DoClaimUpdate(role.Id, role.Claims, cancellationToken);
 			}
 		}
 
-		protected virtual Task<UpdateResult> DoClaimUpdate(TKey roleId, ICollection<IdentityClaim> claims, CancellationToken cancellationToken = default(CancellationToken))
+		protected virtual Task<UpdateResult> DoClaimUpdate(TKey roleId, IList<IdentityClaim> claims, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			// update role claims in the database
 			var filter = Builders<TRole>.Filter.Eq(x => x.Id, roleId);
@@ -411,6 +446,24 @@ namespace AspNet5.Identity.MongoDB
 
 			var result = await _collection.Find(filter).FirstOrDefaultAsync();
 			return result != null;
+		}
+
+		protected virtual TKey ConvertIdFromString(string id)
+		{
+			if (string.IsNullOrWhiteSpace(id))
+			{
+				return default(TKey);
+			}
+			return (TKey)TypeDescriptor.GetConverter(typeof(TKey)).ConvertFromInvariantString(id);
+		}
+
+		protected virtual string ConvertIdToString(TKey id)
+		{
+			if (id == null || id.Equals(default(TKey)))
+			{
+				return null;
+			}
+			return id.ToString();
 		}
 
 		#endregion

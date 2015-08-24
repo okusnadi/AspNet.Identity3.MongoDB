@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AspNet5.Identity.MongoDB;
+using AspNet.Identity3.MongoDB;
 using MongoDB.Driver;
 using Xunit;
 
@@ -107,7 +107,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 			public void Can_inisialise_from_MongoCollection()
 			{
 				// arrange
-				string collectionName = typeof(IdentityUser).Name;
+				string collectionName = userCollection.CollectionNamespace.CollectionName;
 				var UserStore = new UserStoreHelper(userCollection);
 
 				// assert

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AspNet5.Identity.MongoDB
+namespace AspNet.Identity3.MongoDB
 {
 
 	public class IdentityUser : IdentityUser<string>

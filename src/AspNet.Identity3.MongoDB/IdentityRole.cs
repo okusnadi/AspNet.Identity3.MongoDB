@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace AspNet5.Identity.MongoDB
+namespace AspNet.Identity3.MongoDB
 {
 	/// <summary>
 	/// Represents a Role entity

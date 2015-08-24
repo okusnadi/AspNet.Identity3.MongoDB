@@ -1,4 +1,4 @@
-﻿namespace AspNet5.Identity.MongoDB
+﻿namespace AspNet.Identity3.MongoDB
 {
 	/// <summary>
 	/// EntityType that represents one specific claim

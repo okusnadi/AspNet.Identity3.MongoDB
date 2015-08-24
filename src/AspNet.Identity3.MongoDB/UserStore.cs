@@ -6,9 +6,8 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
-using AspNet.Identity3.MongoDB;
 
-namespace AspNet5.Identity.MongoDB
+namespace AspNet.Identity3.MongoDB
 {
 	public class UserStore<TUser, TRole> 
 		: UserStore<TUser, TRole, string>

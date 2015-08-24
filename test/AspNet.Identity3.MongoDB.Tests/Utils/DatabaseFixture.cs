@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
-using AspNet5.Identity.MongoDB;
 using Microsoft.Framework.Configuration;
 using MongoDB.Driver;
 
@@ -11,11 +9,11 @@ namespace AspNet.Identity3.MongoDB.Tests
 	public class DatabaseFixture<T> : DatabaseFixture
 		where T : class
 	{
-		public DatabaseFixture() : this(typeof(T).Name) { }
-		public DatabaseFixture(bool dropDatabaseOnInit, bool dropDatabaseOnDispose) : this(typeof(T).Name, dropDatabaseOnInit, dropDatabaseOnDispose) { }
+		public DatabaseFixture() : base(typeof(T).Name) { }
+		public DatabaseFixture(bool dropDatabaseOnInit, bool dropDatabaseOnDispose) : base(typeof(T).Name, null, dropDatabaseOnInit, dropDatabaseOnDispose) { }
 
-		public DatabaseFixture(string databaseName = null) : base(databaseName) { }
-		public DatabaseFixture(string databaseName, bool dropDatabaseOnInit, bool dropDatabaseOnDispose) : base (databaseName, dropDatabaseOnInit, dropDatabaseOnDispose) { }
+		public DatabaseFixture(string collectionPrefix, string databaseName = null) : base(collectionPrefix, databaseName) { }
+		public DatabaseFixture(string collectionPrefix, string databaseName, bool dropDatabaseOnInit, bool dropDatabaseOnDispose) : base(collectionPrefix, databaseName, dropDatabaseOnInit, dropDatabaseOnDispose) { }
 	}
 
 	public class DatabaseFixture : IDisposable
@@ -24,9 +22,9 @@ namespace AspNet.Identity3.MongoDB.Tests
 		private IMongoDatabase _mongoDatabase;
 		protected bool _dropDatabaseOnInit;
 		protected bool _dropDatabaseOnDispose;
-		
-		public DatabaseFixture(string databaseName = null) : this(databaseName, true, false) { }
-		public DatabaseFixture(string databaseName, bool dropDatabaseOnInit, bool dropDatabaseOnDispose)
+
+		public DatabaseFixture(string collectionPrefix, string databaseName = null) : this(collectionPrefix, databaseName, true, false) { }
+		public DatabaseFixture(string collectionPrefix, string databaseName, bool dropDatabaseOnInit, bool dropDatabaseOnDispose)
 		{
 			RegisterClassMap<IdentityUser, IdentityRole, string>.Init();
 
@@ -37,7 +35,9 @@ namespace AspNet.Identity3.MongoDB.Tests
 			Configuration = builder.Build();
 
 			ConnectionString = Configuration["Data:ConnectionString"];
-			DatabaseName = string.IsNullOrWhiteSpace(databaseName) ? Configuration["Data:database"] : databaseName;
+			CollectionPrefix = string.IsNullOrWhiteSpace(collectionPrefix) ? DateTime.UtcNow.ToShortTimeString() : collectionPrefix;
+			DatabaseName = !string.IsNullOrWhiteSpace(databaseName) ? databaseName :
+									!string.IsNullOrWhiteSpace(Configuration["Data:database"]) ? Configuration["Data:database"] : "Testing";
 
 			_dropDatabaseOnInit = dropDatabaseOnInit;
 			_dropDatabaseOnDispose = dropDatabaseOnDispose;
@@ -45,10 +45,11 @@ namespace AspNet.Identity3.MongoDB.Tests
 			if(_dropDatabaseOnInit) DropDatabase();
 		}
 
-		
+
 		public IConfiguration Configuration { get; private set; }
 		public string ConnectionString { get; private set; }
 		public string DatabaseName { get; private set; }
+		public string CollectionPrefix { get; private set; }
 
 		public void Dispose()
 		{
@@ -57,20 +58,37 @@ namespace AspNet.Identity3.MongoDB.Tests
 
 		public void DropDatabase()
 		{
-			GetMongoClient().DropDatabaseAsync(DatabaseName);
-			Thread.Sleep(500);
+			foreach(var c in _mongoCollectionNames)
+			{
+				GetMongoDatabase().DropCollectionAsync(c);
+			}
+			var cursorTask = GetMongoDatabase().ListCollectionsAsync();
+			// as its async function - sleep for 0.5 sec just to give it a chance to run and finish
+			Thread.Sleep(25);
+
+			var cursor = cursorTask.Result;
+			cursor.ForEachAsync(c =>
+			{
+				var collectionName = c["name"].ToString();
+				GetMongoDatabase().DropCollectionAsync(collectionName);
+			});
+
+
+			Thread.Sleep(25);
 		}
 
 		public IMongoClient GetMongoClient()
 		{
-			if (_mongoClient == null) {
+			if(_mongoClient == null)
+			{
 				_mongoClient = new MongoClient(ConnectionString);
 			}
 			return _mongoClient;
 		}
 		public IMongoDatabase GetMongoDatabase()
 		{
-			if (_mongoDatabase == null) {
+			if(_mongoDatabase == null)
+			{
 				_mongoDatabase = GetMongoClient().GetDatabase(DatabaseName);
 			}
 			return _mongoDatabase;
@@ -78,10 +96,10 @@ namespace AspNet.Identity3.MongoDB.Tests
 
 		public IMongoCollection<T> GetCollection<T>()
 		{
-			var collectionName = typeof(T).Name;
+			var collectionName = string.Format("{0}_{1}", CollectionPrefix, typeof(T).Name);
 			var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.WMajority };
 			_mongoCollectionNames.Add(collectionName);
-			
+
 			return GetMongoDatabase().GetCollection<T>(collectionName, collectionSettings);
 		}
 		private IList<string> _mongoCollectionNames = new List<string>();
