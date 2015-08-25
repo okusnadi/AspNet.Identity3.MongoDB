@@ -63,8 +63,8 @@ namespace AspNet.Identity3.MongoDB.Tests
 				GetMongoDatabase().DropCollectionAsync(c);
 			}
 			var cursorTask = GetMongoDatabase().ListCollectionsAsync();
-			// as its async function - sleep for 0.5 sec just to give it a chance to run and finish
-			Thread.Sleep(25);
+			// as its async function - sleep for  a bit just to give it a chance to run and finish
+			Thread.Sleep(50);
 
 			var cursor = cursorTask.Result;
 			cursor.ForEachAsync(c =>
@@ -73,8 +73,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				GetMongoDatabase().DropCollectionAsync(collectionName);
 			});
 
-
-			Thread.Sleep(25);
+			Thread.Sleep(50);
 		}
 
 		public IMongoClient GetMongoClient()

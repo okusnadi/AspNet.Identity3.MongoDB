@@ -316,7 +316,7 @@ namespace AspNet.Identity3.MongoDB
 			ThrowIfDisposed();
 			if (role == null) throw new ArgumentNullException(nameof(role));
 
-			IList<Claim> result = role.Claims.Select(c => new Claim(c.ClaimType, c.ClaimValue)).ToList();
+			IList<Claim> result = role.Claims == null ? new List<Claim>() : role.Claims.Select(c => new Claim(c.ClaimType, c.ClaimValue)).ToList();
 			return Task.FromResult(result);
 		}
 
@@ -327,25 +327,24 @@ namespace AspNet.Identity3.MongoDB
 		/// <param name="claim">The <see cref="Claim"/> to add.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public virtual Task AddClaimAsync(TRole role, Claim claim, CancellationToken cancellationToken = default(CancellationToken))
+		public virtual async Task AddClaimAsync(TRole role, Claim claim, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
 			if (role == null) throw new ArgumentNullException(nameof(role));
 			if (claim == null) throw new ArgumentNullException(nameof(claim));
-
+			
+			if (role.Claims == null) role.Claims = new List<IdentityClaim>();
+			
 			// claim and value already exist - just return
-			if (role.Claims.Any(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value)) return Task.FromResult(0);
+			if (role.Claims.Any(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value)) return;
 			
 			// new claim for the role
-			role.Claims.Add(new IdentityClaim
-			{
-				ClaimType = claim.Type,
-				ClaimValue = claim.Value
-			});
-			// update role claims in the database
-			DoClaimUpdate(role.Id, role.Claims, cancellationToken);
+			var c = new IdentityClaim {ClaimType = claim.Type, ClaimValue = claim.Value};
+			role.Claims.Add(c);
 
-			return Task.FromResult(0);
+			// update role claims in the database
+			var update = Builders<TRole>.Update.Push(x => x.Claims, c);
+			await DoRoleDetailsUpdate(role.Id, update, null, cancellationToken);
 		}
 
 		/// <summary>
@@ -361,22 +360,22 @@ namespace AspNet.Identity3.MongoDB
 			if (role == null) throw new ArgumentNullException(nameof(role));
 			if (claim == null) throw new ArgumentNullException(nameof(claim));
 
+			if (role.Claims == null)
+			{
+				role.Claims = new List<IdentityClaim>();
+				return;
+			}
+
 			if (role.Claims.Any(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value))
 			{
 				var c = role.Claims.Single(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value);
 				role.Claims.Remove(c);
-				await DoClaimUpdate(role.Id, role.Claims, cancellationToken);
+
+				var update = Builders<TRole>.Update.Pull(x => x.Claims, c);
+				await DoRoleDetailsUpdate(role.Id, update, null, cancellationToken);
 			}
 		}
-
-		protected virtual Task<UpdateResult> DoClaimUpdate(TKey roleId, IList<IdentityClaim> claims, CancellationToken cancellationToken = default(CancellationToken))
-		{
-			// update role claims in the database
-			var filter = Builders<TRole>.Filter.Eq(x => x.Id, roleId);
-			var update = Builders<TRole>.Update.Set(x => x.Claims, claims);
-			return _collection.UpdateOneAsync(filter, update, null, cancellationToken);
-		}
-
+		
 		#endregion
 
 		#region IQueryableRoleStore<TRole>
@@ -465,6 +464,20 @@ namespace AspNet.Identity3.MongoDB
 				return null;
 			}
 			return id.ToString();
+		}
+
+		/// <summary>
+		/// update sub-set of role details in database
+		/// </summary>
+		/// <param name="roleId"></param>
+		/// <param name="update"></param>
+		/// <param name="options"></param>
+		/// <param name="cancellationToken"></param>
+		/// <returns></returns>
+		protected virtual async Task<UpdateResult> DoRoleDetailsUpdate(TKey roleId, UpdateDefinition<TRole> update, UpdateOptions options = null, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			var filter = Builders<TRole>.Filter.Eq(x => x.Id, roleId);
+			return await _collection.UpdateOneAsync(filter, update, options, cancellationToken);
 		}
 
 		#endregion

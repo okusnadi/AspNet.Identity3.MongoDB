@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using Xunit;
@@ -46,6 +47,14 @@ namespace AspNet.Identity3.MongoDB.Tests
 
 				await Assert.ThrowsAsync<ObjectDisposedException>(async () => await _userStore.GetClaimsAsync(null));
 
+				// TODO:
+				// AddLoginAsync
+				// GetClaimsAsync
+				// AddClaimsAsync
+				// ReplaceClaimAsync
+				// RemoveClaimsAsync
+				// GetUsersForClaimAsync
+
 			}
 
 			[Fact]
@@ -62,6 +71,15 @@ namespace AspNet.Identity3.MongoDB.Tests
 				await Assert.ThrowsAsync<ArgumentNullException>("user", async () => await _userStore.DeleteAsync(null));
 
 				await Assert.ThrowsAsync<ArgumentNullException>("user", async () => await _userStore.GetClaimsAsync(null));
+
+				// TODO:
+				// AddLoginAsync - check user and login
+
+				// GetClaimsAsync - user
+				// AddClaimsAsync - user
+				// ReplaceClaimAsync - user, claim, newClaim
+				// RemoveClaimsAsync - user
+				// GetUsersForClaimAsync - claim
 			}
 		}
 
@@ -174,5 +192,81 @@ namespace AspNet.Identity3.MongoDB.Tests
 			}
 		}
 
+		public class GetClaimsAsyncMethod : UserStoreInMemoryTests
+		{
+			[Fact]
+			public async Task Returns_empty_list_when_claims_on_user_not_set()
+			{
+				// arrange
+				var user = new IdentityUser();
+
+				// act
+				var result = await _userStore.GetClaimsAsync(user);
+
+				// assert
+				Assert.Empty(result);
+			}
+
+
+			[Fact]
+			public async Task Returns_empty_list_when_claims_on_user_is_null()
+			{
+				// arrange
+				var user = new IdentityUser { Claims = null };
+
+				// act
+				var result = await _userStore.GetClaimsAsync(user);
+
+				// assert
+				Assert.Empty(result);
+			}
+
+			[Fact]
+			public async Task Returns_list_of_claims_from_user()
+			{
+				// arrange
+				var user = new IdentityUser();
+				var claim1 = new IdentityClaim { ClaimType = "ClaimType1", ClaimValue = "some value" };
+				var claim2 = new IdentityClaim { ClaimType = "ClaimType2", ClaimValue = "some other value" };
+				user.Claims.Add(claim1);
+				user.Claims.Add(claim2);
+				
+				// act
+				var result = await _userStore.GetClaimsAsync(user);
+
+				// assert
+				Assert.Equal(user.Claims.Count, result.Count);
+				Assert.True(result.Single(c => c.Type == claim1.ClaimType && c.Value == claim1.ClaimValue) != null);
+				Assert.True(result.Single(c => c.Type == claim2.ClaimType && c.Value == claim2.ClaimValue) != null);
+
+			}
+			
+			[Fact]
+			public async Task Returns_all_claims_from_users_claims_and_roles()
+			{
+				// arrange
+				var user = new IdentityUser();
+				var claim1 = new IdentityClaim { ClaimType = "ClaimType1", ClaimValue = "some value" };
+				var claim2 = new IdentityClaim { ClaimType = "ClaimType2", ClaimValue = "some other value" };
+				var claim3 = new IdentityClaim { ClaimType = "ClaimType3", ClaimValue = "yet another value" };
+				user.Claims.Add(claim1);
+				user.Claims.Add(claim2);
+
+				var role = new IdentityRole();
+				role.Claims.Add(claim1);
+				role.Claims.Add(claim3);
+				user.Roles.Add(role);
+				
+				// act
+				var result = await _userStore.GetClaimsAsync(user);
+
+				// assert
+				Assert.Equal(3, result.Count);
+				Assert.True(result.Single(c => c.Type == claim1.ClaimType && c.Value == claim1.ClaimValue) != null);
+				Assert.True(result.Single(c => c.Type == claim2.ClaimType && c.Value == claim2.ClaimValue) != null);
+				Assert.True(result.Single(c => c.Type == claim3.ClaimType && c.Value == claim3.ClaimValue) != null);
+
+			}
+		}
 	}
 }

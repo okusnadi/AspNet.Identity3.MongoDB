@@ -4,10 +4,9 @@ using System.Linq;
 
 namespace AspNet.Identity3.MongoDB
 {
-
 	public class IdentityUser : IdentityUser<string>
 	{
-		public IdentityUser()
+		public IdentityUser() : base()
 		{
 			Id = Guid.NewGuid().ToString();
 		}
@@ -35,7 +34,6 @@ namespace AspNet.Identity3.MongoDB
 		/// Email
 		/// </summary>
 		public virtual string Email { get; set; }
-
 		public virtual string NormalizedEmail { get; set; }
 
 		/// <summary>
@@ -86,12 +84,22 @@ namespace AspNet.Identity3.MongoDB
 		/// <summary>
 		/// Navigation property for users in the role
 		/// </summary>
-		public virtual IList<IdentityRole<TKey>> Roles { get; } = new List<IdentityRole<TKey>>();
+		public virtual IList<IdentityRole<TKey>> Roles
+		{
+			get { return _roles; }
+			set { _roles = value ?? new List<IdentityRole<TKey>>(); }
+		} 
+		private IList<IdentityRole<TKey>> _roles = new List<IdentityRole<TKey>>();
 
 		/// <summary>
 		/// Navigation property for users claims
 		/// </summary>
-		public virtual IList<IdentityClaim> Claims { get; } = new List<IdentityClaim>();
+		public virtual IList<IdentityClaim> Claims
+		{
+			get { return _claims; }
+			set { _claims = value ?? new List<IdentityClaim>(); }
+		}
+		private IList<IdentityClaim> _claims = new List<IdentityClaim>();
 
 		/// <summary>
 		/// Get a list of all user's claims combined with claims from role
@@ -100,14 +108,24 @@ namespace AspNet.Identity3.MongoDB
 		{ 
 			get
 			{
-				return Claims.Concat(Roles.SelectMany(r => r.Claims)).Distinct().ToList();
+				// as Claims and Roles are virtual and could be overridden with an implementation that allows nulls
+				//	- make sure they aren't null just in case
+				var clms = Claims ?? new List<IdentityClaim>();
+				var rls = Roles ??  new List<IdentityRole<TKey>>();
+
+				return clms.Concat(rls.Where(r => r.Claims != null).SelectMany(r => r.Claims)).Distinct().ToList();
 			}
 		}
 
 		/// <summary>
 		/// Navigation property for users logins
 		/// </summary>
-		public virtual IList<IdentityUserLogin> Logins { get; } = new List<IdentityUserLogin>();
+		public virtual IList<IdentityUserLogin> Logins
+		{
+			get { return _logins; }
+			set { _logins = value ?? new List<IdentityUserLogin>(); }
+		}
+		private IList<IdentityUserLogin> _logins = new List<IdentityUserLogin>();
 
 		/// <summary>
 		/// Returns a friendly name

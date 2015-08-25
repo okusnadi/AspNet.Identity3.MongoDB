@@ -17,6 +17,8 @@ namespace AspNet.Identity3.MongoDB.Tests
 		protected IdentityClaim Claim4;
 		protected IdentityClaim Claim1Alt;
 
+		protected IdentityUserLogin Login1;
+
 		public IdentityUserTests()
 		{
 			User = new IdentityUser("John Doe");
@@ -29,13 +31,65 @@ namespace AspNet.Identity3.MongoDB.Tests
 			Claim3 = new IdentityClaim { ClaimType = "Claim3", ClaimValue = "Yet another value" };
 			Claim4 = new IdentityClaim { ClaimType = "Claim4", ClaimValue = "Many many claims" };
 
-
 			Claim1Alt = new IdentityClaim { ClaimType = "Claim1", ClaimValue = "Some alternate value" };
+
+			Login1 = new IdentityUserLogin { LoginProvider = "Form", ProviderDisplayName = "Bob", ProviderKey = "password"};
 
 		}
 
 		#endregion
-		
+
+		public class RolesProperty : IdentityUserTests
+		{
+			[Fact]
+			public void When_try_to_set_roles_to_null_is_actually_set_to_empty_list()
+			{
+				// arrange
+				User.Roles.Add(Role1);
+
+				// act
+				User.Roles = null;
+
+				// assert
+				Assert.NotNull(User.Roles);
+				Assert.Empty(User.Roles);
+			}
+		}
+
+		public class ClaimsProperty : IdentityUserTests
+		{
+			[Fact]
+			public void When_try_to_set_claims_to_null_is_actually_set_to_empty_list()
+			{
+				// arrange
+				User.Claims.Add(Claim1);
+
+				// act
+				User.Claims = null;
+
+				// assert
+				Assert.NotNull(User.Claims);
+				Assert.Empty(User.Claims);
+			}
+		}
+
+		public class LoginsProperty : IdentityUserTests
+		{
+			[Fact]
+			public void When_try_to_set_logins_to_null_is_actually_set_to_empty_list()
+			{
+				// arrange
+				User.Logins.Add(Login1);
+
+				// act
+				User.Logins = null;
+
+				// assert
+				Assert.NotNull(User.Logins);
+				Assert.Empty(User.Logins);
+			}
+		}
+
 		public class AllClaimsMethod : IdentityUserTests
 		{
 			[Fact]
@@ -57,6 +111,7 @@ namespace AspNet.Identity3.MongoDB.Tests
 				Assert.Contains(Claim1, User.AllClaims);
 				Assert.Contains(Claim2, User.AllClaims);
 				Assert.Equal(2, User.AllClaims.Count);
+				
 			}
 
 			[Fact]

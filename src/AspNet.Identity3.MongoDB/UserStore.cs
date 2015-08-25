@@ -242,12 +242,17 @@ namespace AspNet.Identity3.MongoDB
 		/// <param name="user">The user to update.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the <see cref="IdentityResult"/> of the update operation.</returns>
-		public virtual Task<IdentityResult> UpdateAsync(TUser user, CancellationToken cancellationToken = default(CancellationToken))
+		public virtual async Task<IdentityResult> UpdateAsync(TUser user, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
 			if (user == null) throw new ArgumentNullException(nameof(user));
+			if (await UserDetailsAlreadyExists(user, cancellationToken)) return IdentityResult.Failed(ErrorDescriber.DuplicateUserName(user.ToString()));
 
-			throw new NotImplementedException();
+			var filter = Builders<TUser>.Filter.Eq(x => x.Id, user.Id);
+			var updateOptions = new UpdateOptions { IsUpsert = true };
+			await _collection.ReplaceOneAsync(filter, user, updateOptions, cancellationToken);
+
+			return IdentityResult.Success;
 		}
 
 		/// <summary>
@@ -256,12 +261,15 @@ namespace AspNet.Identity3.MongoDB
 		/// <param name="user">The user to delete.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the <see cref="IdentityResult"/> of the update operation.</returns>
-		public virtual Task<IdentityResult> DeleteAsync(TUser user, CancellationToken cancellationToken = default(CancellationToken))
+		public virtual async Task<IdentityResult> DeleteAsync(TUser user, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
 			if (user == null) throw new ArgumentNullException(nameof(user));
 
-			throw new NotImplementedException();
+			var filter = Builders<TUser>.Filter.Eq(x => x.Id, user.Id);
+			await _collection.DeleteOneAsync(filter, cancellationToken);
+
+			return IdentityResult.Success;
 		}
 
 		/// <summary>
@@ -275,8 +283,13 @@ namespace AspNet.Identity3.MongoDB
 		public virtual Task<TUser> FindByIdAsync(string userId, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			ThrowIfDisposed();
+			TKey id = ConvertIdFromString(userId);
+			if (id == null) return Task.FromResult((TUser)null);
 
-			throw new NotImplementedException();
+			var filter = Builders<TUser>.Filter.Eq(x => x.Id, id);
+			var options = new FindOptions { AllowPartialResults = false };
+
+			return _collection.Find(filter, options).SingleOrDefaultAsync(cancellationToken);
 		}
 
 		/// <summary>
@@ -291,7 +304,12 @@ namespace AspNet.Identity3.MongoDB
 		{
 			ThrowIfDisposed();
 
-			throw new NotImplementedException();
+			if (string.IsNullOrWhiteSpace(normalizedUserName)) return Task.FromResult((TUser)null);
+
+			var filter = Builders<TUser>.Filter.Eq(x => x.NormalizedUserName, normalizedUserName);
+			var options = new FindOptions { AllowPartialResults = false };
+
+			return _collection.Find(filter, options).SingleOrDefaultAsync(cancellationToken);
 		}
 
 		#endregion
@@ -305,9 +323,25 @@ namespace AspNet.Identity3.MongoDB
 		/// <param name="login">The external <see cref="UserLoginInfo"/> to add to the specified <paramref name="user"/>.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-		public virtual Task AddLoginAsync(TUser user, UserLoginInfo login, CancellationToken cancellationToken = default(CancellationToken))
+		public virtual async Task AddLoginAsync(TUser user, UserLoginInfo login, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			ThrowIfDisposed();
+			if (user == null) throw new ArgumentNullException(nameof(user));
+			if (login == null) throw new ArgumentNullException(nameof(login));
+
+			if (user.Logins == null) user.Logins = new List<IdentityUserLogin>();
+
+			var iul = new IdentityUserLogin
+			{
+				ProviderKey = login.ProviderKey,
+				LoginProvider = login.LoginProvider,
+				ProviderDisplayName = login.ProviderDisplayName
+			};
+			user.Logins.Add(iul);
+
+			// update in database
+			var update = Builders<TUser>.Update.Push(x => x.Logins, iul);
+			await DoUserDetailsUpdate(user.Id, update, null, cancellationToken);
 		}
 
 		/// <summary>
@@ -426,7 +460,7 @@ namespace AspNet.Identity3.MongoDB
 		#region IUserClaimStore<TUser>
 
 		/// <summary>
-		/// Gets a list of <see cref="Claim"/>s to be belonging to the specified <paramref name="user"/> as an asynchronous operation.
+		/// Gets a list of all <see cref="Claim"/>s to be belonging to the specified <paramref name="user"/> as an asynchronous operation.
 		/// </summary>
 		/// <param name="user">The role whose claims to retrieve.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
@@ -438,8 +472,11 @@ namespace AspNet.Identity3.MongoDB
 			cancellationToken.ThrowIfCancellationRequested();
 			ThrowIfDisposed();
 			if (user == null) throw new ArgumentNullException(nameof(user));
+			EnsureClaimsNotNull(user);
+			EnsureRolesNotNull(user);
 
-			throw new NotImplementedException();
+			IList<Claim> result = user.AllClaims.Select(c => new Claim(c.ClaimType, c.ClaimValue)).ToList();
+			return Task.FromResult(result);
 		}
 
 		/// <summary>
@@ -449,9 +486,30 @@ namespace AspNet.Identity3.MongoDB
 		/// <param name="claims">The collection of <see cref="Claim"/>s to add.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public virtual Task AddClaimsAsync(TUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken = default(CancellationToken))
+		public virtual async Task AddClaimsAsync(TUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			ThrowIfDisposed();
+			if (user == null) throw new ArgumentNullException(nameof(user));
+			EnsureClaimsNotNull(user);
+			if (claims == null || !claims.Any()) return;
+
+			// claim and value already exist - just return
+			var newClaimsList = new List<IdentityClaim>();
+			foreach (var c in 
+					from claim in claims 
+					where !user.Claims.Any(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value) 
+					select new IdentityClaim { ClaimType = claim.Type, ClaimValue = claim.Value })
+			{
+				newClaimsList.Add(c);
+				user.Claims.Add(c);
+			}
+
+			// if no new claims - nothing else to do
+			if (!newClaimsList.Any()) return;
+			
+			// update user claims in the database
+			var update = Builders<TUser>.Update.PushEach(x => x.Claims, newClaimsList);
+			await DoUserDetailsUpdate(user.Id, update, null, cancellationToken);
 		}
 
 		/// <summary>
@@ -462,8 +520,14 @@ namespace AspNet.Identity3.MongoDB
 		/// <param name="newClaim">The new claim to replace the existing <paramref name="claim"/> with.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public virtual Task ReplaceClaimAsync(TUser user, Claim claim, Claim newClaim, CancellationToken cancellationToken = default(CancellationToken))
+		public virtual async Task ReplaceClaimAsync(TUser user, Claim claim, Claim newClaim, CancellationToken cancellationToken = default(CancellationToken))
 		{
+			ThrowIfDisposed();
+			if (user == null) throw new ArgumentNullException(nameof(user));
+			EnsureClaimsNotNull(user);
+			if (claim == null) throw new ArgumentNullException(nameof(claim));
+			if (newClaim == null) throw new ArgumentNullException(nameof(newClaim));
+			
 			throw new NotImplementedException();
 		}
 
@@ -474,9 +538,29 @@ namespace AspNet.Identity3.MongoDB
 		/// <param name="claims">A collection of <see cref="Claim"/>s to remove.</param>
 		/// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be cancelled.</param>
 		/// <returns>The task object representing the asynchronous operation.</returns>
-		public virtual Task RemoveClaimsAsync(TUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken = default(CancellationToken))
+		public virtual async Task RemoveClaimsAsync(TUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			throw new NotImplementedException();
+			ThrowIfDisposed();
+			if (user == null) throw new ArgumentNullException(nameof(user));
+			EnsureClaimsNotNull(user);
+			if (!user.Claims.Any()) return;
+			if (claims == null || !claims.Any()) return;
+			
+			var existingClaimsList = new List<IdentityClaim>();
+			foreach (var c in 
+					from claim in claims 
+					where user.Claims.Any(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value) 
+					select user.Claims.Single(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value))
+			{
+				existingClaimsList.Add(c);
+				user.Claims.Remove(c);
+			}
+
+			if (!existingClaimsList.Any()) return;
+
+			// update user claims in the database
+			var update = Builders<TUser>.Update.PullAll(x => x.Claims, existingClaimsList);
+			await DoUserDetailsUpdate(user.Id, update, null, cancellationToken);
 		}
 
 		/// <summary>
@@ -490,6 +574,9 @@ namespace AspNet.Identity3.MongoDB
 		/// </returns>
 		public virtual Task<IList<TUser>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken = default(CancellationToken))
 		{
+			ThrowIfDisposed();
+			if (claim == null) throw new ArgumentNullException(nameof(claim));
+
 			throw new NotImplementedException();
 		}
 
@@ -916,6 +1003,30 @@ namespace AspNet.Identity3.MongoDB
 				return null;
 			}
 			return id.ToString();
+		}
+
+		/// <summary>
+		/// update sub-set of user details in database
+		/// </summary>
+		/// <param name="userId"></param>
+		/// <param name="update"></param>
+		/// <param name="options"></param>
+		/// <param name="cancellationToken"></param>
+		/// <returns></returns>
+		protected virtual Task<UpdateResult> DoUserDetailsUpdate(TKey userId, UpdateDefinition<TUser> update, UpdateOptions options = null, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			var filter = Builders<TUser>.Filter.Eq(x => x.Id, userId);
+			return _collection.UpdateOneAsync(filter, update, options, cancellationToken);
+		}
+
+		protected virtual void EnsureClaimsNotNull(TUser user)
+		{
+			if (user.Claims == null) user.Claims = new List<IdentityClaim>();
+		}
+
+		protected virtual void EnsureRolesNotNull(TUser user)
+		{
+			if (user.Roles == null) user.Roles = new List<IdentityRole<TKey>>();
 		}
 
 		#endregion

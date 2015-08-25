@@ -214,8 +214,22 @@ namespace AspNet.Identity3.MongoDB.Tests
 				Assert.Empty(result);
 			}
 
+
 			[Fact]
-			public async Task Returns_clist_of_claims_from_role()
+			public async Task Returns_empty_list_when_claims_on_role_is_null()
+			{
+				// arrange
+				var role = new IdentityRole { Claims = null };
+
+				// act
+				var result = await _roleStore.GetClaimsAsync(role);
+
+				// assert
+				Assert.Empty(result);
+			}
+
+			[Fact]
+			public async Task Returns_list_of_claims_from_role()
 			{
 				// arrange
 				var role = new IdentityRole();

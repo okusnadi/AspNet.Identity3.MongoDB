@@ -425,6 +425,31 @@ namespace AspNet.Identity3.MongoDB.Tests
 			}
 
 			[Fact]
+			public async Task Adding_new_claim_to_role_with_null_claims_updates_database_role_record()
+			{
+				// arrange
+				var claim = new Claim("ClaimType", "some value");
+
+				var role = new IdentityRole("Adding_new_claim_to_role_with_null_claims_updates_database_role_record");
+				role.Claims = null;
+
+				await _roleStore.CreateAsync(role);
+
+				// act
+				await _roleStore.AddClaimAsync(role, claim);
+
+				// assert
+
+				// check role claims from memory
+				var identityClaim = new IdentityClaim { ClaimType = claim.Type, ClaimValue = claim.Value };
+				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim }, role.Claims);
+
+				// check role claims from DB
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim }, roleFromDb.Claims);
+			}
+
+			[Fact]
 			public async Task Adding_existing_claim_to_role_does_not_update_database_role_record()
 			{
 				// arrange
@@ -480,11 +505,11 @@ namespace AspNet.Identity3.MongoDB.Tests
 			public RemoveClaimAsyncMethod() : base(typeof(RemoveClaimAsyncMethod).Name) { }
 
 			[Fact]
-			public async Task Removing_unkown_claim_does_not_change_database_role_record()
+			public async Task Removing_unknown_claim_does_not_change_database_role_record()
 			{
 				// arrange
 				var identityClaim = new IdentityClaim { ClaimType = "claim type", ClaimValue = "some value" };
-				var role = new IdentityRole("Removing_unkown_claim_does_not_change_database_role_record");
+				var role = new IdentityRole("Removing_unknown_claim_does_not_change_database_role_record");
 				role.Claims.Add(identityClaim);
 
 				await _roleStore.CreateAsync(role);
@@ -501,6 +526,29 @@ namespace AspNet.Identity3.MongoDB.Tests
 				// check role claims from DB
 				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
 				IdentityClaimAssert.Equal(new List<IdentityClaim> { identityClaim }, roleFromDb.Claims);
+			}
+
+			[Fact]
+			public async Task Removing_claim_from_null_role_claims_does_not_change_database_role_record()
+			{
+				// arrange
+				var role = new IdentityRole("Removing_unknown_claim_and_role_claims_is_null_does_not_change_database_role_record");
+				role.Claims = null;
+
+				await _roleStore.CreateAsync(role);
+
+				// act
+				var claim = new Claim("other type", "some other value");
+				await _roleStore.RemoveClaimAsync(role, claim);
+
+				// assert
+
+				// check role claims from memory
+				Assert.Equal(0, role.Claims.Count);
+
+				// check role claims from DB
+				var roleFromDb = await _roleCollection.Find(x => x.Id == role.Id).SingleOrDefaultAsync();
+				Assert.Equal(0, roleFromDb.Claims.Count);
 			}
 
 			[Fact]

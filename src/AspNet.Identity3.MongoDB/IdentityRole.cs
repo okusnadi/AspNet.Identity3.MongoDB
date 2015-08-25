@@ -11,7 +11,7 @@ namespace AspNet.Identity3.MongoDB
 		/// <summary>
 		/// Constructor
 		/// </summary>
-		public IdentityRole()
+		public IdentityRole() : base()
 		{
 			Id = Guid.NewGuid().ToString();
 		}
@@ -58,7 +58,12 @@ namespace AspNet.Identity3.MongoDB
 		/// <summary>
 		/// Navigation property for claims in the role
 		/// </summary>
-		public virtual IList<IdentityClaim> Claims { get; set; } = new List<IdentityClaim>();
+		public virtual IList<IdentityClaim> Claims
+		{
+			get { return _claims; }
+			set { _claims = value ?? new List<IdentityClaim>(); }
+		}
+		private IList<IdentityClaim> _claims = new List<IdentityClaim>();
 
 		/// <summary>
 		/// Returns a friendly name
