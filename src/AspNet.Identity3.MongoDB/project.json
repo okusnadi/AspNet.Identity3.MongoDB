@@ -1,5 +1,5 @@
 ﻿{
-	"version": "1.0.0-*",
+	"version": "1.0.0-beta6-*",
 	"description": "AspNet.Identity3.MongoDB Class Library",
 	"authors": [ "SaanSoft" ],
 	"tags": [ "" ],
